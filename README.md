@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# APIWatch — API Monitoring & Incident Management Platform
 
-## Getting Started
+Projet de stage — Plateforme de surveillance d'APIs avec gestion automatique des incidents.
 
-First, run the development server:
+## Stack technique
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework** : Next.js 16 (App Router, JavaScript)
+- **Base de données** : PostgreSQL 17 (via Prisma ORM v6)
+- **Auth** : `bcryptjs` + `jose` (JWT signé, cookie HTTP-Only)
+- **State Management** : TanStack React Query
+- **Styles** : Tailwind CSS
+- **Graphiques** : Recharts
+
+## Fonctionnalités implémentées
+
+| Étape | Fonctionnalité | Statut |
+|-------|---------------|--------|
+| 1-2 | Initialisation du projet, PostgreSQL + Prisma | ✅ |
+| 3 | Authentification (Register / Login / Logout / Session) | ✅ |
+| 4 | Gestion des API Endpoints (CRUD) | ✅ |
+| 5 | Health Checks manuels + Historique | ✅ |
+| 6 | Monitoring automatique (Scheduler côté serveur) | ✅ |
+| 7 | Incident Management (Création / Résolution automatique) | ✅ |
+| 8 | Uptime & Analytics (en cours) | 🔄 |
+
+## Installation et démarrage
+
+### Prérequis
+- Node.js 18+
+- PostgreSQL 17
+
+### Configuration
+
+1. Cloner le dépôt :
+   ```bash
+   git clone https://github.com/amalbenbihi01/apiwatch.git
+   cd apiwatch
+   ```
+
+2. Installer les dépendances :
+   ```bash
+   npm install
+   ```
+
+3. Configurer les variables d'environnement :
+   ```bash
+   cp .env.example .env
+   # Remplir les valeurs dans .env
+   ```
+
+4. Créer la base de données PostgreSQL :
+   ```sql
+   CREATE DATABASE apiwatch;
+   ```
+
+5. Appliquer les migrations Prisma :
+   ```bash
+   npx prisma migrate deploy
+   npx prisma generate
+   ```
+
+6. Démarrer le serveur de développement :
+   ```bash
+   npm run dev
+   ```
+
+L'application sera disponible sur [http://localhost:3000](http://localhost:3000).
+
+## Architecture
+
+```
+Next.js Monolithe Full Stack
+│
+├── app/                    # Pages & Route Handlers (App Router)
+│   ├── api/                # API Routes
+│   │   ├── auth/           # Register, Login, Logout, Me
+│   │   ├── endpoints/      # CRUD Endpoints, Checks, Incidents, Analytics
+│   │   ├── incidents/      # Liste des incidents
+│   │   └── cron/           # Route monitoring automatique (CRON_SECRET)
+│   ├── dashboard/          # Pages Dashboard protégées
+│   ├── login/
+│   └── register/
+│
+├── components/
+│   └── api-monitoring/     # ApiCard, ApiForm, ApiList, HealthCheckStatus, IncidentsList
+│
+├── hooks/                  # React Query hooks (use-apis, use-monitoring, use-incidents)
+├── lib/                    # auth.js, prisma.js, scheduler.js
+├── services/               # Service Layer (auth, api, monitoring, incident)
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── middleware.js            # Protection des routes /dashboard
+├── instrumentation.js       # Démarrage automatique du scheduler
+└── .env.example
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Sécurité
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- Sessions HTTP-Only (cookie `apiwatch_session`)
+- JWT signé avec `jose` (HS256)
+- Isolation stricte par `userId` sur toutes les requêtes
+- Route Cron protégée par `CRON_SECRET` (Bearer token)
+- `.env` exclu de Git
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Monitoring automatique
 
-## Learn More
+Le scheduler se lance automatiquement au démarrage du serveur via `instrumentation.js`.
+Pour déclencher un cycle manuellement :
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+curl -X POST http://localhost:3000/api/cron/monitoring \
+  -H "Authorization: Bearer VOTRE_CRON_SECRET"
+```

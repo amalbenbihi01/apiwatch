@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  apiEndpoints ApiEndpoint[]
+  incidents    Incident[]
+
+  @@map("users")
+}
+
+model ApiEndpoint {
+  id          String   @id @default(uuid())
+  name        String
+  url         String
+  method      String   @default("GET")
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checks    ApiCheck[]
+  incidents Incident[]
+
+  @@map("api_endpoints")
+}
+
+model ApiCheck {
+  id             String      @id @default(uuid())
+  status         String // "UP" ou "DOWN"
+  httpStatusCode Int?
+  responseTimeMs Int?
+  errorMessage   String?
+  checkedAt      DateTime    @default(now())
+
+  endpointId String
+  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, checkedAt])
+  @@map("api_checks")
+}
+
+model Incident {
+  id         String    @id @default(uuid())
+  status     String    @default("OPEN") // "OPEN" ou "RESOLVED"
+  title      String?
+  cause      String?
+  startedAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  endpointId String
+  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, status])
+  @@index([userId, status])
+  @@map("incidents")
+}
