@@ -7,6 +7,7 @@ import ApiForm from '@/components/api-monitoring/ApiForm';
 import IncidentsList from '@/components/api-monitoring/IncidentsList';
 import { useApis, useCreateApi, useDeleteApi } from '@/hooks/use-apis';
 import { useIncidents } from '@/hooks/use-incidents';
+import { useGlobalAnalytics } from '@/hooks/use-analytics';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const { data: apis, isLoading, error } = useApis();
   const { data: openIncidents } = useIncidents('OPEN');
   const { data: allIncidents, isLoading: isLoadingIncidents, error: errorIncidents } = useIncidents();
+  const { data: globalAnalytics, isLoading: isLoadingAnalytics } = useGlobalAnalytics();
 
   const createApiMutation = useCreateApi();
   const deleteApiMutation = useDeleteApi();
@@ -96,40 +98,93 @@ export default function DashboardPage() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto p-6 space-y-8">
-        {/* Top Control & Summary Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 bg-slate-800/80 border border-slate-700/80 p-5 rounded-xl flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-white">Mes APIs</h1>
-              <p className="text-xs text-slate-400">
-                Gérez la liste de vos endpoints d&apos;APIs enregistrés.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center space-x-2"
-            >
-              <span>{showAddForm ? 'Fermer le formulaire' : '+ Ajouter une API'}</span>
-            </button>
+        {/* Top Control Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-800/80 border border-slate-700/80 p-5 rounded-xl">
+          <div>
+            <h1 className="text-xl font-bold text-white">Dashboard Monitoring</h1>
+            <p className="text-xs text-slate-400">
+              Vue d&apos;ensemble de la disponibilité et des performances de vos endpoints.
+            </p>
           </div>
 
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center space-x-2"
+          >
+            <span>{showAddForm ? 'Fermer le formulaire' : '+ Ajouter une API'}</span>
+          </button>
+        </div>
+
+        {/* Global Analytics KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Uptime Global 24h */}
+          <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-lg space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Uptime Global (24h)
+            </span>
+            <div className="text-2xl font-extrabold text-emerald-400">
+              {isLoadingAnalytics ? (
+                <span className="animate-pulse text-base text-slate-500">Chargement...</span>
+              ) : globalAnalytics?.globalUptime24h !== null && globalAnalytics?.globalUptime24h !== undefined ? (
+                `${globalAnalytics.globalUptime24h}%`
+              ) : (
+                <span className="text-base text-slate-500">Aucune donnée</span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500">Pondéré sur tous vos checks 24h</p>
+          </div>
+
+          {/* Temps de réponse moyen 24h */}
+          <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-lg space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Temps Moyen (24h)
+            </span>
+            <div className="text-2xl font-extrabold font-mono text-indigo-400">
+              {isLoadingAnalytics ? (
+                <span className="animate-pulse text-base text-slate-500">Chargement...</span>
+              ) : globalAnalytics?.globalAvgResponseTime24h !== null && globalAnalytics?.globalAvgResponseTime24h !== undefined ? (
+                `${globalAnalytics.globalAvgResponseTime24h} ms`
+              ) : (
+                <span className="text-base text-slate-500">Aucune donnée</span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500">Moyenne de réponse globale</p>
+          </div>
+
+          {/* État des APIs */}
+          <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-lg space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              APIs Surveillées
+            </span>
+            <div className="text-2xl font-extrabold text-slate-200">
+              {isLoadingAnalytics ? (
+                <span className="animate-pulse text-base text-slate-500">Chargement...</span>
+              ) : (
+                `${globalAnalytics?.upApisCount || 0} / ${globalAnalytics?.activeApisCount || 0} UP`
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500">
+              {globalAnalytics?.totalApis || 0} APIs au total ({globalAnalytics?.downApisCount || 0} Down)
+            </p>
+          </div>
+
+          {/* Incidents Ouverts */}
           <div
-            className={`p-5 rounded-xl border flex items-center justify-between ${
+            className={`border p-5 rounded-xl shadow-lg space-y-1 ${
               openCount > 0
                 ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
                 : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
             }`}
           >
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wider block">
-                Incidents en cours
-              </span>
-              <span className="text-2xl font-extrabold mt-1 block">
-                {openCount > 0 ? `🔴 ${openCount} Open` : '🟢 0 Incident'}
-              </span>
+            <span className="text-xs font-semibold uppercase tracking-wider block text-slate-400">
+              Incidents Ouverts
+            </span>
+            <div className="text-2xl font-extrabold">
+              {openCount > 0 ? `🔴 ${openCount} Open` : '🟢 0 Open'}
             </div>
-            <div className="text-2xl">{openCount > 0 ? '⚠️' : '✅'}</div>
+            <p className="text-[11px] opacity-75">
+              {openCount > 0 ? 'Action requise sur vos APIs' : 'Toutes les APIs fonctionnent'}
+            </p>
           </div>
         </div>
 

@@ -58,6 +58,8 @@ export function useRunCheck() {
       queryClient.invalidateQueries({ queryKey: ['apis'] });
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
       queryClient.invalidateQueries({ queryKey: ['endpoint-incidents', endpointId] });
+      queryClient.invalidateQueries({ queryKey: ['endpoint-analytics', endpointId] });
+      queryClient.invalidateQueries({ queryKey: ['global-analytics'] });
     },
   });
 }

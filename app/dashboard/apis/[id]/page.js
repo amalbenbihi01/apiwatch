@@ -6,9 +6,11 @@ import Link from 'next/link';
 import ApiForm from '@/components/api-monitoring/ApiForm';
 import HealthCheckStatus from '@/components/api-monitoring/HealthCheckStatus';
 import IncidentsList from '@/components/api-monitoring/IncidentsList';
+import AnalyticsChart from '@/components/api-monitoring/AnalyticsChart';
 import { useApi, useUpdateApi, useDeleteApi } from '@/hooks/use-apis';
 import { useLatestCheck, useApiChecks, useRunCheck } from '@/hooks/use-monitoring';
 import { useEndpointIncidents } from '@/hooks/use-incidents';
+import { useEndpointAnalytics } from '@/hooks/use-analytics';
 
 export default function ApiDetailPage({ params }) {
   const resolvedParams = use(params);
@@ -16,6 +18,7 @@ export default function ApiDetailPage({ params }) {
   const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [period, setPeriod] = useState('24h');
 
   const { data: api, isLoading, error } = useApi(id);
   const updateApiMutation = useUpdateApi();
@@ -24,6 +27,7 @@ export default function ApiDetailPage({ params }) {
   const { data: latestCheck, isLoading: isLoadingLatestCheck } = useLatestCheck(id);
   const { data: checksHistory } = useApiChecks(id);
   const { data: endpointIncidents, isLoading: isLoadingIncidents, error: errorIncidents } = useEndpointIncidents(id);
+  const { data: analytics, isLoading: isLoadingAnalytics } = useEndpointAnalytics(id, period);
   const runCheckMutation = useRunCheck();
 
   const handleUpdate = (formData) => {
@@ -72,9 +76,12 @@ export default function ApiDetailPage({ params }) {
     );
   }
 
+  const summary = analytics?.summary;
+  const incSummary = analytics?.incidentsSummary;
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col p-6">
-      <div className="max-w-3xl w-full mx-auto space-y-6">
+      <div className="max-w-4xl w-full mx-auto space-y-6">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
@@ -153,21 +160,6 @@ export default function ApiDetailPage({ params }) {
                   </p>
                 </div>
               )}
-
-              <div className="border-t border-slate-700/80 pt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
-                <div>
-                  <span>Créée le : </span>
-                  <span className="text-slate-300 font-mono">
-                    {new Date(api.createdAt).toLocaleString('fr-FR')}
-                  </span>
-                </div>
-                <div>
-                  <span>Dernière modification : </span>
-                  <span className="text-slate-300 font-mono">
-                    {new Date(api.updatedAt).toLocaleString('fr-FR')}
-                  </span>
-                </div>
-              </div>
             </div>
 
             {/* Health Check Section */}
@@ -177,6 +169,101 @@ export default function ApiDetailPage({ params }) {
               onRunCheck={handleRunCheck}
               isChecking={runCheckMutation.isPending}
             />
+
+            {/* Analytics & Performance Section */}
+            <section className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800/80 border border-slate-700/80 p-4 rounded-xl">
+                <div>
+                  <h2 className="text-base font-bold text-white">Uptime & Analytics</h2>
+                  <p className="text-xs text-slate-400">Statistiques de performance et disponibilité par période</p>
+                </div>
+
+                {/* Period Selector Tabs */}
+                <div className="inline-flex bg-slate-900 p-1 rounded-lg border border-slate-700 text-xs font-medium">
+                  {['24h', '7d', '30d'].map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPeriod(p)}
+                      className={`px-3 py-1.5 rounded-md transition-colors ${
+                        period === p
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {p === '24h' ? '24 Heures' : p === '7d' ? '7 Jours' : '30 Jours'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Analytics KPI Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl space-y-1">
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Uptime</span>
+                  <div className="text-lg font-extrabold text-emerald-400">
+                    {isLoadingAnalytics ? '...' : summary?.uptimePercentage !== null && summary?.uptimePercentage !== undefined ? `${summary.uptimePercentage}%` : '—'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl space-y-1">
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Temps Moyen</span>
+                  <div className="text-lg font-extrabold font-mono text-indigo-400">
+                    {isLoadingAnalytics ? '...' : summary?.avgResponseTimeMs !== null && summary?.avgResponseTimeMs !== undefined ? `${summary.avgResponseTimeMs} ms` : '—'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl space-y-1">
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Temps Min</span>
+                  <div className="text-lg font-extrabold font-mono text-slate-300">
+                    {isLoadingAnalytics ? '...' : summary?.minResponseTimeMs !== null && summary?.minResponseTimeMs !== undefined ? `${summary.minResponseTimeMs} ms` : '—'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl space-y-1">
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Temps Max</span>
+                  <div className="text-lg font-extrabold font-mono text-rose-400">
+                    {isLoadingAnalytics ? '...' : summary?.maxResponseTimeMs !== null && summary?.maxResponseTimeMs !== undefined ? `${summary.maxResponseTimeMs} ms` : '—'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl space-y-1">
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Percentile P95</span>
+                  <div className="text-lg font-extrabold font-mono text-amber-400">
+                    {isLoadingAnalytics ? '...' : summary?.p95ResponseTimeMs !== null && summary?.p95ResponseTimeMs !== undefined ? `${summary.p95ResponseTimeMs} ms` : '—'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl space-y-1">
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Checks</span>
+                  <div className="text-lg font-extrabold font-mono text-slate-200">
+                    {isLoadingAnalytics ? '...' : summary?.totalChecks || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Incident Outage Summary for Period */}
+              {incSummary && (
+                <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl flex items-center justify-between text-xs text-slate-300">
+                  <div className="flex items-center space-x-2">
+                    <span>⚠️</span>
+                    <span>
+                      Pannes sur cette période ({period}) :{' '}
+                      <strong className="text-white">{incSummary.count} incident(s)</strong>
+                    </span>
+                  </div>
+                  <div>
+                    Durée totale de panne :{' '}
+                    <strong className="text-rose-400 font-mono">{incSummary.totalDurationFormatted}</strong>
+                  </div>
+                </div>
+              )}
+
+              {/* Recharts Analytics Chart */}
+              <AnalyticsChart
+                series={analytics?.chartSeries}
+                isLoading={isLoadingAnalytics}
+              />
+            </section>
 
             {/* Incidents History Section for this API */}
             <section className="space-y-3">
@@ -195,7 +282,7 @@ export default function ApiDetailPage({ params }) {
             {checksHistory && checksHistory.length > 0 && (
               <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl space-y-4">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Historique des contrôles ({checksHistory.length})
+                  Historique récent des contrôles ({checksHistory.length})
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-mono text-slate-300">
