@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import ApiList from '@/components/api-monitoring/ApiList';
 import ApiForm from '@/components/api-monitoring/ApiForm';
 import IncidentsList from '@/components/api-monitoring/IncidentsList';
+import NotificationPreferences from '@/components/api-monitoring/NotificationPreferences';
+import NotificationLogsList from '@/components/api-monitoring/NotificationLogsList';
 import { useApis, useCreateApi, useDeleteApi } from '@/hooks/use-apis';
 import { useIncidents } from '@/hooks/use-incidents';
 import { useGlobalAnalytics } from '@/hooks/use-analytics';
@@ -103,7 +105,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-xl font-bold text-white">Dashboard Monitoring</h1>
             <p className="text-xs text-slate-400">
-              Vue d&apos;ensemble de la disponibilité et des performances de vos endpoints.
+              Vue d&apos;ensemble de la disponibilité, des incidents et des alertes.
             </p>
           </div>
 
@@ -217,8 +219,13 @@ export default function DashboardPage() {
           />
         </section>
 
+        {/* Notification Preferences Section */}
+        <section className="space-y-3 pt-2">
+          <NotificationPreferences />
+        </section>
+
         {/* Incidents Section */}
-        <section className="space-y-3 pt-4">
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase text-slate-400 tracking-wider">
               Incidents récents
@@ -230,6 +237,11 @@ export default function DashboardPage() {
             error={errorIncidents}
             showEndpoint={true}
           />
+        </section>
+
+        {/* Notification Logs Section */}
+        <section className="space-y-3">
+          <NotificationLogsList />
         </section>
       </main>
     </div>

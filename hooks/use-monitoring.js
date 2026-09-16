@@ -60,6 +60,7 @@ export function useRunCheck() {
       queryClient.invalidateQueries({ queryKey: ['endpoint-incidents', endpointId] });
       queryClient.invalidateQueries({ queryKey: ['endpoint-analytics', endpointId] });
       queryClient.invalidateQueries({ queryKey: ['global-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-logs'] });
     },
   });
 }

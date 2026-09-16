@@ -11,14 +11,16 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  name         String
-  email        String        @unique
-  passwordHash String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  apiEndpoints ApiEndpoint[]
-  incidents    Incident[]
+  id                        String            @id @default(uuid())
+  name                      String
+  email                     String            @unique
+  passwordHash              String
+  emailNotificationsEnabled Boolean           @default(true)
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  apiEndpoints              ApiEndpoint[]
+  incidents                 Incident[]
+  notificationLogs          NotificationLog[]
 
   @@map("users")
 }
@@ -57,22 +59,46 @@ model ApiCheck {
 }
 
 model Incident {
-  id         String    @id @default(uuid())
-  status     String    @default("OPEN") // "OPEN" ou "RESOLVED"
-  title      String?
-  cause      String?
-  startedAt  DateTime  @default(now())
-  resolvedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id               String            @id @default(uuid())
+  status           String            @default("OPEN") // "OPEN" ou "RESOLVED"
+  title            String?
+  cause            String?
+  startedAt        DateTime          @default(now())
+  resolvedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  endpointId String
-  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  endpointId       String
+  endpoint         ApiEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationLogs NotificationLog[]
 
   @@index([endpointId, status])
   @@index([userId, status])
   @@map("incidents")
+}
+
+model NotificationLog {
+  id         String    @id @default(uuid())
+  type       String    // "INCIDENT_OPEN" ou "INCIDENT_RESOLVED"
+  channel    String    @default("EMAIL")
+  status     String    // "SENT" ou "FAILED"
+  recipient  String
+  subject    String?
+  message    String?
+  error      String?
+  createdAt  DateTime  @default(now())
+  sentAt     DateTime?
+
+  incidentId String
+  incident   Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, type])
+  @@index([userId, createdAt])
+  @@map("notification_logs")
 }
