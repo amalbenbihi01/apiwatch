@@ -61,6 +61,8 @@ export function useRunCheck() {
       queryClient.invalidateQueries({ queryKey: ['endpoint-analytics', endpointId] });
       queryClient.invalidateQueries({ queryKey: ['global-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['notification-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-notification-count'] });
+      queryClient.invalidateQueries({ queryKey: ['in-app-notifications'] });
     },
   });
 }

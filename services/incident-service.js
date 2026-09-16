@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { getApiEndpointById } from './api-service.js';
 import { sendIncidentNotification } from './notification-service.js';
+import { createInAppNotification } from './in-app-notification-service.js';
 
 export async function processCheckIncident(endpoint, checkResult) {
   if (!endpoint || !endpoint.id || !endpoint.userId) {
@@ -49,12 +50,20 @@ export async function processCheckIncident(endpoint, checkResult) {
       throw err;
     }
 
-    // Trigger Notification for INCIDENT_OPEN in isolated try/catch block
+    // Trigger Email & In-App Notifications in isolated try/catch blocks
     if (createdIncident) {
+      // 1. Email Notification
       try {
         await sendIncidentNotification(createdIncident, 'INCIDENT_OPEN');
-      } catch (notifErr) {
-        console.error(`[Notification Trigger Error] Échec pour l'incident OPEN ${createdIncident.id}:`, notifErr);
+      } catch (emailErr) {
+        console.error(`[Email Trigger Error] OPEN ${createdIncident.id}:`, emailErr);
+      }
+
+      // 2. In-App Notification
+      try {
+        await createInAppNotification(createdIncident, 'INCIDENT_OPEN');
+      } catch (inAppErr) {
+        console.error(`[InApp Trigger Error] OPEN ${createdIncident.id}:`, inAppErr);
       }
     }
 
@@ -77,11 +86,19 @@ export async function processCheckIncident(endpoint, checkResult) {
         },
       });
 
-      // Trigger Notification for INCIDENT_RESOLVED in isolated try/catch block
+      // Trigger Email & In-App Notifications in isolated try/catch blocks
+      // 1. Email Notification
       try {
         await sendIncidentNotification(resolvedIncident, 'INCIDENT_RESOLVED');
-      } catch (notifErr) {
-        console.error(`[Notification Trigger Error] Échec pour l'incident RESOLVED ${resolvedIncident.id}:`, notifErr);
+      } catch (emailErr) {
+        console.error(`[Email Trigger Error] RESOLVED ${resolvedIncident.id}:`, emailErr);
+      }
+
+      // 2. In-App Notification
+      try {
+        await createInAppNotification(resolvedIncident, 'INCIDENT_RESOLVED');
+      } catch (inAppErr) {
+        console.error(`[InApp Trigger Error] RESOLVED ${resolvedIncident.id}:`, inAppErr);
       }
 
       return resolvedIncident;

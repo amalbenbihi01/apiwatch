@@ -7,6 +7,7 @@ import ApiForm from '@/components/api-monitoring/ApiForm';
 import IncidentsList from '@/components/api-monitoring/IncidentsList';
 import NotificationPreferences from '@/components/api-monitoring/NotificationPreferences';
 import NotificationLogsList from '@/components/api-monitoring/NotificationLogsList';
+import NotificationBell from '@/components/api-monitoring/NotificationBell';
 import { useApis, useCreateApi, useDeleteApi } from '@/hooks/use-apis';
 import { useIncidents } from '@/hooks/use-incidents';
 import { useGlobalAnalytics } from '@/hooks/use-analytics';
@@ -85,6 +86,7 @@ export default function DashboardPage() {
 
         {user && (
           <div className="flex items-center space-x-4">
+            <NotificationBell />
             <span className="text-sm text-slate-300 hidden sm:inline">
               {user.name} <span className="text-slate-500">({user.email})</span>
             </span>

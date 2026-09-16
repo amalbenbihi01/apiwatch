@@ -11,34 +11,36 @@ datasource db {
 }
 
 model User {
-  id                        String            @id @default(uuid())
+  id                        String                @id @default(uuid())
   name                      String
-  email                     String            @unique
+  email                     String                @unique
   passwordHash              String
-  emailNotificationsEnabled Boolean           @default(true)
-  createdAt                 DateTime          @default(now())
-  updatedAt                 DateTime          @updatedAt
+  emailNotificationsEnabled Boolean               @default(true)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
   apiEndpoints              ApiEndpoint[]
   incidents                 Incident[]
   notificationLogs          NotificationLog[]
+  inAppNotifications        InAppNotification[]
 
   @@map("users")
 }
 
 model ApiEndpoint {
-  id          String   @id @default(uuid())
-  name        String
-  url         String
-  method      String   @default("GET")
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String              @id @default(uuid())
+  name               String
+  url                String
+  method             String              @default("GET")
+  description        String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  checks    ApiCheck[]
-  incidents Incident[]
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checks             ApiCheck[]
+  incidents          Incident[]
+  inAppNotifications InAppNotification[]
 
   @@map("api_endpoints")
 }
@@ -51,29 +53,30 @@ model ApiCheck {
   errorMessage   String?
   checkedAt      DateTime    @default(now())
 
-  endpointId String
-  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  endpointId     String
+  endpoint       ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   @@index([endpointId, checkedAt])
   @@map("api_checks")
 }
 
 model Incident {
-  id               String            @id @default(uuid())
-  status           String            @default("OPEN") // "OPEN" ou "RESOLVED"
-  title            String?
-  cause            String?
-  startedAt        DateTime          @default(now())
-  resolvedAt       DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                 String              @id @default(uuid())
+  status             String              @default("OPEN") // "OPEN" ou "RESOLVED"
+  title              String?
+  cause              String?
+  startedAt          DateTime            @default(now())
+  resolvedAt         DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  endpointId       String
-  endpoint         ApiEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  endpointId         String
+  endpoint           ApiEndpoint         @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
-  userId           String
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notificationLogs NotificationLog[]
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationLogs   NotificationLog[]
+  inAppNotifications InAppNotification[]
 
   @@index([endpointId, status])
   @@index([userId, status])
@@ -101,4 +104,28 @@ model NotificationLog {
   @@unique([incidentId, type])
   @@index([userId, createdAt])
   @@map("notification_logs")
+}
+
+model InAppNotification {
+  id          String      @id @default(uuid())
+  type        String      // "INCIDENT_OPEN" ou "INCIDENT_RESOLVED"
+  title       String
+  message     String
+  isRead      Boolean     @default(false)
+  readAt      DateTime?
+  createdAt   DateTime    @default(now())
+
+  endpointId  String
+  endpoint    ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  incidentId  String
+  incident    Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, type])
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
+  @@map("in_app_notifications")
 }
