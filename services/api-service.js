@@ -18,6 +18,8 @@ export const urlSchema = z
     }
   );
 
+const emailSchema = z.string().email('Adresse email invalide');
+
 const apiEndpointSchema = z.object({
   name: z.string().min(1, 'Le nom est requis').max(100, 'Le nom est trop long'),
   url: urlSchema,
@@ -28,6 +30,52 @@ const apiEndpointSchema = z.object({
     .default('GET'),
   description: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+
+  // Request Configuration
+  headersJson: z.record(z.string(), z.string()).optional().nullable(),
+  queryParamsJson: z.record(z.string(), z.string()).optional().nullable(),
+  bodyJson: z
+    .string()
+    .optional()
+    .nullable()
+    .refine(
+      (val) => {
+        if (!val || val.trim() === '') return true;
+        try {
+          JSON.parse(val);
+          return true;
+        } catch (_) {
+          return false;
+        }
+      },
+      { message: 'Le corps de la requête doit être un JSON valide' }
+    ),
+
+  // Alert Configuration
+  timeoutMs: z
+    .number({ invalid_type_error: 'Le timeout doit être un nombre' })
+    .min(500, 'Le timeout minimal est de 500 ms')
+    .max(30000, 'Le timeout maximal est de 30000 ms')
+    .default(5000),
+  responseTimeThresholdMs: z
+    .number({ invalid_type_error: 'Le seuil de temps de réponse doit être un nombre' })
+    .min(50, 'Le seuil minimal de temps de réponse est de 50 ms')
+    .max(30000, 'Le seuil maximal de temps de réponse est de 30000 ms')
+    .optional()
+    .nullable(),
+  unhealthyThreshold: z
+    .number()
+    .min(1, 'Le nombre d’échecs minimal est de 1')
+    .max(10, 'Le nombre d’échecs maximal est de 10')
+    .default(1),
+  recoveryThreshold: z
+    .number()
+    .min(1, 'Le nombre de succès minimal est de 1')
+    .max(10, 'Le nombre de succès maximal est de 10')
+    .default(1),
+
+  // Multi-email recipients
+  alertEmails: z.array(emailSchema).optional().nullable(),
 });
 
 const updateApiEndpointSchema = apiEndpointSchema.partial();
@@ -41,15 +89,23 @@ export async function createApiEndpoint(userId, data) {
     throw new Error(firstError);
   }
 
-  const { name, url, method, description, isActive } = validation.data;
+  const validatedData = validation.data;
 
   return await prisma.apiEndpoint.create({
     data: {
-      name,
-      url,
-      method,
-      description: description || null,
-      isActive,
+      name: validatedData.name,
+      url: validatedData.url,
+      method: validatedData.method,
+      description: validatedData.description || null,
+      isActive: validatedData.isActive,
+      headersJson: validatedData.headersJson || null,
+      queryParamsJson: validatedData.queryParamsJson || null,
+      bodyJson: validatedData.bodyJson || null,
+      timeoutMs: validatedData.timeoutMs ?? 5000,
+      responseTimeThresholdMs: validatedData.responseTimeThresholdMs || null,
+      unhealthyThreshold: validatedData.unhealthyThreshold ?? 1,
+      recoveryThreshold: validatedData.recoveryThreshold ?? 1,
+      alertEmails: validatedData.alertEmails || null,
       userId,
     },
   });

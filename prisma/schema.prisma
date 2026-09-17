@@ -11,30 +11,51 @@ datasource db {
 }
 
 model User {
-  id                        String                @id @default(uuid())
+  id                        String              @id @default(uuid())
   name                      String
-  email                     String                @unique
+  email                     String              @unique
   passwordHash              String
-  emailNotificationsEnabled Boolean               @default(true)
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
+  emailNotificationsEnabled Boolean             @default(true)
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
   apiEndpoints              ApiEndpoint[]
   incidents                 Incident[]
   notificationLogs          NotificationLog[]
   inAppNotifications        InAppNotification[]
+  statusPage                StatusPage?
 
   @@map("users")
 }
 
 model ApiEndpoint {
-  id                 String              @id @default(uuid())
-  name               String
-  url                String
-  method             String              @default("GET")
-  description        String?
-  isActive           Boolean             @default(true)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id          String  @id @default(uuid())
+  name        String
+  url         String
+  method      String  @default("GET")
+  description String?
+  isActive    Boolean @default(true)
+  isPublic    Boolean @default(false)
+
+  // Request Configuration
+  headersJson     Json?
+  queryParamsJson Json?
+  bodyJson        String?
+
+  // Monitoring / Alert Configuration
+  timeoutMs               Int  @default(5000)
+  responseTimeThresholdMs Int?
+  unhealthyThreshold      Int  @default(1)
+  recoveryThreshold       Int  @default(1)
+
+  // Alert recipients
+  alertEmails Json?
+
+  // Webhook configuration
+  webhookUrl    String?
+  webhookSecret String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -46,32 +67,32 @@ model ApiEndpoint {
 }
 
 model ApiCheck {
-  id             String      @id @default(uuid())
+  id             String   @id @default(uuid())
   status         String // "UP" ou "DOWN"
   httpStatusCode Int?
   responseTimeMs Int?
   errorMessage   String?
-  checkedAt      DateTime    @default(now())
+  checkedAt      DateTime @default(now())
 
-  endpointId     String
-  endpoint       ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  endpointId String
+  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   @@index([endpointId, checkedAt])
   @@map("api_checks")
 }
 
 model Incident {
-  id                 String              @id @default(uuid())
-  status             String              @default("OPEN") // "OPEN" ou "RESOLVED"
-  title              String?
-  cause              String?
-  startedAt          DateTime            @default(now())
-  resolvedAt         DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id         String    @id @default(uuid())
+  status     String    @default("OPEN") // "OPEN" ou "RESOLVED"
+  title      String?
+  cause      String?
+  startedAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  endpointId         String
-  endpoint           ApiEndpoint         @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  endpointId String
+  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -84,22 +105,22 @@ model Incident {
 }
 
 model NotificationLog {
-  id         String    @id @default(uuid())
-  type       String    // "INCIDENT_OPEN" ou "INCIDENT_RESOLVED"
-  channel    String    @default("EMAIL")
-  status     String    // "SENT" ou "FAILED"
-  recipient  String
-  subject    String?
-  message    String?
-  error      String?
-  createdAt  DateTime  @default(now())
-  sentAt     DateTime?
+  id        String    @id @default(uuid())
+  type      String // "INCIDENT_OPEN" ou "INCIDENT_RESOLVED"
+  channel   String    @default("EMAIL")
+  status    String // "SENT" ou "FAILED"
+  recipient String
+  subject   String?
+  message   String?
+  error     String?
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
 
   incidentId String
-  incident   Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([incidentId, type])
   @@index([userId, createdAt])
@@ -107,25 +128,40 @@ model NotificationLog {
 }
 
 model InAppNotification {
-  id          String      @id @default(uuid())
-  type        String      // "INCIDENT_OPEN" ou "INCIDENT_RESOLVED"
-  title       String
-  message     String
-  isRead      Boolean     @default(false)
-  readAt      DateTime?
-  createdAt   DateTime    @default(now())
+  id        String    @id @default(uuid())
+  type      String // "INCIDENT_OPEN" ou "INCIDENT_RESOLVED"
+  title     String
+  message   String
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
 
-  endpointId  String
-  endpoint    ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  endpointId String
+  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
-  incidentId  String
-  incident    Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
-  userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([incidentId, type])
   @@index([userId, isRead, createdAt])
   @@index([userId, createdAt])
   @@map("in_app_notifications")
+}
+
+model StatusPage {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String   @default("System Status")
+  description String?
+  isEnabled   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("status_pages")
 }

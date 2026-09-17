@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import ApiList from '@/components/api-monitoring/ApiList';
 import ApiForm from '@/components/api-monitoring/ApiForm';
 import IncidentsList from '@/components/api-monitoring/IncidentsList';
@@ -111,12 +112,21 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center space-x-2"
-          >
-            <span>{showAddForm ? 'Fermer le formulaire' : '+ Ajouter une API'}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/status-page"
+              className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center space-x-2"
+            >
+              <span>🌐 Page de statut</span>
+            </Link>
+
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center space-x-2"
+            >
+              <span>{showAddForm ? 'Fermer le formulaire' : '+ Ajouter une API'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Global Analytics KPI Cards */}
