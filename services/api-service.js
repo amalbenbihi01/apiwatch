@@ -76,6 +76,26 @@ const apiEndpointSchema = z.object({
 
   // Multi-email recipients
   alertEmails: z.array(emailSchema).optional().nullable(),
+
+  // Webhook configuration
+  webhookUrl: z
+    .string()
+    .optional()
+    .nullable()
+    .refine(
+      (val) => {
+        if (!val || val.trim() === '') return true;
+        try {
+          const parsed = new URL(val.trim());
+          return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch (_) {
+          return false;
+        }
+      },
+      { message: "L'URL du webhook doit commencer par http:// ou https://" }
+    ),
+  webhookSecret: z.string().optional().nullable(),
+  clearWebhookSecret: z.boolean().optional(),
 });
 
 const updateApiEndpointSchema = apiEndpointSchema.partial();
@@ -106,6 +126,8 @@ export async function createApiEndpoint(userId, data) {
       unhealthyThreshold: validatedData.unhealthyThreshold ?? 1,
       recoveryThreshold: validatedData.recoveryThreshold ?? 1,
       alertEmails: validatedData.alertEmails || null,
+      webhookUrl: validatedData.webhookUrl ? validatedData.webhookUrl.trim() : null,
+      webhookSecret: validatedData.webhookSecret ? validatedData.webhookSecret.trim() : null,
       userId,
     },
   });
@@ -114,13 +136,15 @@ export async function createApiEndpoint(userId, data) {
 export async function getUserApiEndpoints(userId) {
   if (!userId) throw new Error('Utilisateur non identifié');
 
-  return await prisma.apiEndpoint.findMany({
+  const endpoints = await prisma.apiEndpoint.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
   });
+
+  return endpoints.map((ep) => sanitizeEndpointForClient(ep));
 }
 
-export async function getApiEndpointById(userId, endpointId) {
+export async function getApiEndpointById(userId, endpointId, { raw = false } = {}) {
   if (!userId || !endpointId) throw new Error('Paramètres manquants');
 
   const endpoint = await prisma.apiEndpoint.findFirst({
@@ -134,14 +158,20 @@ export async function getApiEndpointById(userId, endpointId) {
     throw new Error('API non trouvée ou accès refusé');
   }
 
-  return endpoint;
+  return raw ? endpoint : sanitizeEndpointForClient(endpoint);
 }
 
 export async function updateApiEndpoint(userId, endpointId, data) {
   if (!userId || !endpointId) throw new Error('Paramètres manquants');
 
-  // Verify ownership first
-  await getApiEndpointById(userId, endpointId);
+  // Verify ownership and get existing data
+  const existing = await prisma.apiEndpoint.findFirst({
+    where: { id: endpointId, userId },
+  });
+
+  if (!existing) {
+    throw new Error('API non trouvée ou accès refusé');
+  }
 
   const validation = updateApiEndpointSchema.safeParse(data);
   if (!validation.success) {
@@ -149,19 +179,54 @@ export async function updateApiEndpoint(userId, endpointId, data) {
     throw new Error(firstError);
   }
 
-  return await prisma.apiEndpoint.update({
+  const validated = validation.data;
+  const updateData = { ...validated };
+  delete updateData.clearWebhookSecret;
+
+  // Handle webhookSecret update lifecycle securely
+  if (validated.clearWebhookSecret === true || data.webhookSecret === null) {
+    updateData.webhookSecret = null;
+  } else if (
+    typeof validated.webhookSecret === 'string' &&
+    validated.webhookSecret.trim().length > 0
+  ) {
+    updateData.webhookSecret = validated.webhookSecret.trim();
+  } else {
+    // Left empty or undefined: preserve existing secret
+    delete updateData.webhookSecret;
+  }
+
+  if (validated.webhookUrl !== undefined) {
+    updateData.webhookUrl = validated.webhookUrl ? validated.webhookUrl.trim() : null;
+  }
+
+  const updated = await prisma.apiEndpoint.update({
     where: { id: endpointId },
-    data: validation.data,
+    data: updateData,
   });
+
+  return sanitizeEndpointForClient(updated);
 }
 
 export async function deleteApiEndpoint(userId, endpointId) {
   if (!userId || !endpointId) throw new Error('Paramètres manquants');
 
   // Verify ownership first
-  await getApiEndpointById(userId, endpointId);
+  await getApiEndpointById(userId, endpointId, { raw: true });
 
   return await prisma.apiEndpoint.delete({
     where: { id: endpointId },
   });
+}
+
+/**
+ * Sanitizes endpoint record for safe client transmission (never exposes raw webhookSecret).
+ */
+export function sanitizeEndpointForClient(endpoint) {
+  if (!endpoint) return null;
+  const isConfigured = Boolean(endpoint.webhookSecret && endpoint.webhookSecret.trim().length > 0);
+  const copy = { ...endpoint };
+  delete copy.webhookSecret;
+  copy.webhookSecretConfigured = isConfigured;
+  return copy;
 }

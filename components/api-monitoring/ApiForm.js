@@ -46,6 +46,16 @@ export default function ApiForm({ initialData = null, onSubmit, onCancel, isLoad
   const [bodyJson, setBodyJson] = useState(initialData?.bodyJson || '');
   const [alertEmails, setAlertEmails] = useState(initialAlertEmailsArray);
 
+  // Webhook State
+  const [webhookUrl, setWebhookUrl] = useState(initialData?.webhookUrl || '');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [webhookSecretConfigured, setWebhookSecretConfigured] = useState(
+    Boolean(initialData?.webhookSecretConfigured)
+  );
+  const [clearWebhookSecret, setClearWebhookSecret] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState(null);
+
   const [formError, setFormError] = useState('');
   const [urlError, setUrlError] = useState('');
   const [jsonError, setJsonError] = useState('');
@@ -179,6 +189,71 @@ export default function ApiForm({ initialData = null, onSubmit, onCancel, isLoad
     }
   };
 
+  // Webhook Test
+  const handleTestWebhook = async () => {
+    if (!webhookUrl.trim()) {
+      setWebhookTestResult({
+        success: false,
+        message: 'Veuillez saisir une URL de webhook pour lancer le test.',
+      });
+      return;
+    }
+
+    const urlErr = validateUrlFormat(webhookUrl);
+    if (urlErr) {
+      setWebhookTestResult({
+        success: false,
+        message: urlErr,
+      });
+      return;
+    }
+
+    setTestingWebhook(true);
+    setWebhookTestResult(null);
+
+    try {
+      const endpointId = initialData?.id;
+      const targetRoute = endpointId
+        ? `/api/endpoints/${endpointId}/webhook/test`
+        : '/api/endpoints/check-url'; // Fallback if adding brand new
+
+      let res;
+      if (endpointId) {
+        res = await fetch(targetRoute, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            webhookUrl: webhookUrl.trim(),
+            webhookSecret: webhookSecret.trim() || undefined,
+          }),
+        });
+      } else {
+        // Direct test for new unsaved endpoints
+        res = await fetch('/api/endpoints/check-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: webhookUrl.trim(), method: 'POST' }),
+        });
+      }
+
+      const data = await res.json();
+      setWebhookTestResult(data);
+    } catch (err) {
+      setWebhookTestResult({
+        success: false,
+        message: err.message || 'Échec du test de webhook',
+      });
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
+
+  const handleClearWebhookSecret = () => {
+    setClearWebhookSecret(true);
+    setWebhookSecretConfigured(false);
+    setWebhookSecret('');
+  };
+
   // Form Submit
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -245,7 +320,15 @@ export default function ApiForm({ initialData = null, onSubmit, onCancel, isLoad
       unhealthyThreshold: parseInt(formData.unhealthyThreshold, 10) || 1,
       recoveryThreshold: parseInt(formData.recoveryThreshold, 10) || 1,
       alertEmails: validEmails.length > 0 ? validEmails : null,
+      webhookUrl: webhookUrl.trim() ? webhookUrl.trim() : null,
     };
+
+    if (clearWebhookSecret) {
+      payload.clearWebhookSecret = true;
+      payload.webhookSecret = null;
+    } else if (webhookSecret.trim().length > 0) {
+      payload.webhookSecret = webhookSecret.trim();
+    }
 
     onSubmit(payload);
   };
@@ -723,6 +806,127 @@ export default function ApiForm({ initialData = null, onSubmit, onCancel, isLoad
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Webhook Configuration */}
+          <div className="border-t border-slate-700/60 pt-4 space-y-4">
+            <div className="border-b border-slate-700/60 pb-2">
+              <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <span>🌐 Intégration Webhook</span>
+                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono font-medium">
+                  HMAC-SHA256
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                APIWatch enverra un appel HTTP POST (avec signature) lors des ouvertures et résolutions d&apos;incidents.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Webhook URL */}
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  URL du Webhook (HTTP / HTTPS)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    placeholder="https://api.monsite.com/webhooks/apiwatch"
+                    value={webhookUrl}
+                    onChange={(e) => {
+                      setWebhookUrl(e.target.value);
+                      if (webhookTestResult) setWebhookTestResult(null);
+                    }}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestWebhook}
+                    disabled={testingWebhook || !webhookUrl.trim()}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5"
+                  >
+                    {testingWebhook ? (
+                      <>
+                        <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        Test en cours...
+                      </>
+                    ) : (
+                      'Tester le webhook'
+                    )}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Reçoit les événements <code className="text-indigo-300">INCIDENT_OPENED</code> et <code className="text-indigo-300">INCIDENT_RESOLVED</code>.
+                </p>
+              </div>
+
+              {/* Webhook Secret */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-400">
+                    Secret de Signature HMAC (Optionnel)
+                  </label>
+                  {webhookSecretConfigured && !clearWebhookSecret && (
+                    <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1">
+                      🔒 Secret configuré
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder={
+                      webhookSecretConfigured && !clearWebhookSecret
+                        ? '•••••••••••••••• (laisser vide pour conserver)'
+                        : 'Entrez une clé secrète pour signer les requêtes'
+                    }
+                    value={webhookSecret}
+                    onChange={(e) => {
+                      setWebhookSecret(e.target.value);
+                      if (clearWebhookSecret) setClearWebhookSecret(false);
+                      if (webhookTestResult) setWebhookTestResult(null);
+                    }}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 font-mono text-xs"
+                  />
+                  {webhookSecretConfigured && !clearWebhookSecret && (
+                    <button
+                      type="button"
+                      onClick={handleClearWebhookSecret}
+                      className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+                      title="Supprimer la clé secrète"
+                    >
+                      Désactiver le secret
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  En-tête généré : <code className="text-slate-400">X-APIWatch-Signature: sha256=&lt;hmac&gt;</code>.
+                </p>
+              </div>
+
+              {/* Webhook Test Result Banner */}
+              {webhookTestResult && (
+                <div
+                  className={`p-3 rounded-lg border text-xs flex items-center justify-between transition-all ${
+                    webhookTestResult.success
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span>{webhookTestResult.success ? '✅' : '❌'}</span>
+                    <span>{webhookTestResult.message}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWebhookTestResult(null)}
+                    className="text-slate-400 hover:text-white font-bold ml-2"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
