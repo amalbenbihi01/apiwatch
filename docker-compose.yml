@@ -1,0 +1,63 @@
+name: apiwatch
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: apiwatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-apiwatch_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apiwatch_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-apiwatch_db}
+    volumes:
+      - postgres_data_pg17:/var/lib/postgresql/data
+    networks:
+      - apiwatch-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-apiwatch_user} -d ${POSTGRES_DB:-apiwatch_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  apiwatch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apiwatch-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-apiwatch_user}:${POSTGRES_PASSWORD:-apiwatch_password_change_me}@postgres:5432/${POSTGRES_DB:-apiwatch_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-changez-ce-secret-en-production-jwt-32bytes-min}
+      CRON_SECRET: ${CRON_SECRET:-changez-ce-secret-en-production-cron}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      MONITORING_INTERVAL_MINUTES: ${MONITORING_INTERVAL_MINUTES:-5}
+      SMTP_HOST: ${SMTP_HOST:-smtp.ethereal.email}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-APIWatch Alerting <no-reply@apiwatch.io>}
+    networks:
+      - apiwatch-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  apiwatch-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_data_pg17:
+    name: apiwatch_postgres_data_pg17
+    driver: local

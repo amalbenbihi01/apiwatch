@@ -100,8 +100,11 @@ const apiEndpointSchema = z.object({
 
 const updateApiEndpointSchema = apiEndpointSchema.partial();
 
-export async function createApiEndpoint(userId, data) {
-  if (!userId) throw new Error('Utilisateur non identifié');
+/**
+ * Creates a new API endpoint scoped to an active team
+ */
+export async function createApiEndpoint({ userId, teamId }, data) {
+  if (!userId || !teamId) throw new Error('Contexte utilisateur ou équipe manquant');
 
   const validation = apiEndpointSchema.safeParse(data);
   if (!validation.success) {
@@ -128,29 +131,56 @@ export async function createApiEndpoint(userId, data) {
       alertEmails: validatedData.alertEmails || null,
       webhookUrl: validatedData.webhookUrl ? validatedData.webhookUrl.trim() : null,
       webhookSecret: validatedData.webhookSecret ? validatedData.webhookSecret.trim() : null,
+      teamId,
       userId,
     },
   });
 }
 
-export async function getUserApiEndpoints(userId) {
-  if (!userId) throw new Error('Utilisateur non identifié');
+/**
+ * Retrieves all API endpoints scoped to a team
+ */
+export async function getTeamApiEndpoints(teamId) {
+  if (!teamId) throw new Error('Équipe non identifiée');
 
   const endpoints = await prisma.apiEndpoint.findMany({
-    where: { userId },
+    where: { teamId },
     orderBy: { createdAt: 'desc' },
   });
 
   return endpoints.map((ep) => sanitizeEndpointForClient(ep));
 }
 
-export async function getApiEndpointById(userId, endpointId, { raw = false } = {}) {
-  if (!userId || !endpointId) throw new Error('Paramètres manquants');
+/**
+ * Legacy alias for user endpoints (finds endpoints across teams user belongs to or active team)
+ */
+export async function getUserApiEndpoints(userId) {
+  if (!userId) throw new Error('Utilisateur non identifié');
+
+  const endpoints = await prisma.apiEndpoint.findMany({
+    where: {
+      team: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return endpoints.map((ep) => sanitizeEndpointForClient(ep));
+}
+
+/**
+ * Retrieves single API endpoint scoped by teamId
+ */
+export async function getApiEndpointById(teamId, endpointId, { raw = false } = {}) {
+  if (!teamId || !endpointId) throw new Error('Paramètres manquants');
 
   const endpoint = await prisma.apiEndpoint.findFirst({
     where: {
       id: endpointId,
-      userId,
+      teamId,
     },
   });
 
@@ -161,12 +191,14 @@ export async function getApiEndpointById(userId, endpointId, { raw = false } = {
   return raw ? endpoint : sanitizeEndpointForClient(endpoint);
 }
 
-export async function updateApiEndpoint(userId, endpointId, data) {
-  if (!userId || !endpointId) throw new Error('Paramètres manquants');
+/**
+ * Updates an API endpoint scoped by teamId
+ */
+export async function updateApiEndpoint(teamId, endpointId, data) {
+  if (!teamId || !endpointId) throw new Error('Paramètres manquants');
 
-  // Verify ownership and get existing data
   const existing = await prisma.apiEndpoint.findFirst({
-    where: { id: endpointId, userId },
+    where: { id: endpointId, teamId },
   });
 
   if (!existing) {
@@ -208,11 +240,14 @@ export async function updateApiEndpoint(userId, endpointId, data) {
   return sanitizeEndpointForClient(updated);
 }
 
-export async function deleteApiEndpoint(userId, endpointId) {
-  if (!userId || !endpointId) throw new Error('Paramètres manquants');
+/**
+ * Deletes an API endpoint scoped by teamId
+ */
+export async function deleteApiEndpoint(teamId, endpointId) {
+  if (!teamId || !endpointId) throw new Error('Paramètres manquants');
 
-  // Verify ownership first
-  await getApiEndpointById(userId, endpointId, { raw: true });
+  // Verify ownership and existence in the team
+  await getApiEndpointById(teamId, endpointId, { raw: true });
 
   return await prisma.apiEndpoint.delete({
     where: { id: endpointId },

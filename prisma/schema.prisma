@@ -10,6 +10,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
 model User {
   id                        String              @id @default(uuid())
   name                      String
@@ -23,8 +30,57 @@ model User {
   notificationLogs          NotificationLog[]
   inAppNotifications        InAppNotification[]
   statusPage                StatusPage?
+  teamMemberships           TeamMember[]
+  sentInvitations           TeamInvitation[]
+  dashboardPreferences      DashboardPreference[]
 
   @@map("users")
+}
+
+model Team {
+  id                   String                @id @default(uuid())
+  name                 String
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  members              TeamMember[]
+  invitations          TeamInvitation[]
+  endpoints            ApiEndpoint[]
+  dashboardPreferences DashboardPreference[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  role      TeamRole @default(MEMBER)
+  teamId    String
+  userId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@index([teamId])
+  @@map("team_members")
+}
+
+model TeamInvitation {
+  id          String   @id @default(uuid())
+  email       String
+  role        TeamRole @default(MEMBER)
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  teamId      String
+  invitedById String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitedBy   User     @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+  @@index([teamId])
+  @@map("team_invitations")
 }
 
 model ApiEndpoint {
@@ -57,12 +113,18 @@ model ApiEndpoint {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Team association (mandatory, protected from deletion if endpoints exist)
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  // Author / creator traceability
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   checks             ApiCheck[]
   incidents          Incident[]
   inAppNotifications InAppNotification[]
 
+  @@index([teamId])
   @@map("api_endpoints")
 }
 
@@ -78,6 +140,7 @@ model ApiCheck {
   endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   @@index([endpointId, checkedAt])
+  @@index([checkedAt])
   @@map("api_checks")
 }
 
@@ -164,4 +227,21 @@ model StatusPage {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("status_pages")
+}
+
+model DashboardPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  teamId    String
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
+  @@map("dashboard_preferences")
 }

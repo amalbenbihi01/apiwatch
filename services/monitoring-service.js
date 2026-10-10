@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { getApiEndpointById } from './api-service.js';
 import { processCheckIncident } from './incident-service.js';
+import { safeFetch } from '../lib/ssrf-guard.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITY HELPERS — Step 15 Advanced Monitoring
@@ -206,6 +207,7 @@ export async function checkApiEndpoint(endpointId, userId) {
       method: httpMethod,
       headers: requestHeaders,
       signal: controller.signal,
+      timeout,
     };
 
     // Only attach body for methods that support it
@@ -213,7 +215,7 @@ export async function checkApiEndpoint(endpointId, userId) {
       fetchOptions.body = body;
     }
 
-    const response = await fetch(finalUrl, fetchOptions);
+    const response = await safeFetch(finalUrl, fetchOptions);
 
     clearTimeout(timeoutId);
     const endTime = performance.now();

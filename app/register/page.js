@@ -1,19 +1,34 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const invitationToken = searchParams.get('invitationToken') || '';
+  const emailParam = searchParams.get('email') || '';
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    invitationToken: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (emailParam || invitationToken) {
+      setFormData((prev) => ({
+        ...prev,
+        email: emailParam || prev.email,
+        invitationToken: invitationToken || prev.invitationToken,
+      }));
+    }
+  }, [emailParam, invitationToken]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -58,8 +73,19 @@ export default function RegisterPage() {
       <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold tracking-tight text-white">Créer un compte</h1>
-          <p className="text-sm text-slate-400">Rejoignez la plateforme APIWatch</p>
+          <p className="text-sm text-slate-400">
+            {invitationToken ? "Créez votre compte pour rejoindre l'équipe" : 'Rejoignez la plateforme APIWatch'}
+          </p>
         </div>
+
+        {invitationToken && (
+          <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-indigo-300 text-xs flex items-center gap-2">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Vous finalisez une invitation d'équipe. Votre compte y sera automatiquement rattaché.</span>
+          </div>
+        )}
 
         {error && (
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
@@ -131,19 +157,33 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors mt-2"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm shadow-lg shadow-indigo-500/20"
           >
             {loading ? 'Création en cours...' : 'S’inscrire'}
           </button>
         </form>
 
-        <div className="text-center text-xs text-slate-400 pt-2 border-t border-slate-700/60">
+        <div className="text-center text-xs text-slate-400 pt-2 border-t border-slate-700">
           Vous avez déjà un compte ?{' '}
-          <Link href="/login" className="text-indigo-400 hover:underline font-medium">
+          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold">
             Se connecter
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }

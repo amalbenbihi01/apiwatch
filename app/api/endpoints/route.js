@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { createApiEndpoint, getUserApiEndpoints } from '@/services/api-service';
+import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
+import { createApiEndpoint, getTeamApiEndpoints } from '@/services/api-service';
 
 export async function GET() {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'VIEWER');
+    if (!guard.authorized) return guard.response;
 
-    const endpoints = await getUserApiEndpoints(session.userId);
+    const endpoints = await getTeamApiEndpoints(context.team.id);
     return NextResponse.json({ endpoints }, { status: 200 });
   } catch (error) {
     return NextResponse.json(
@@ -21,13 +20,15 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'MEMBER');
+    if (!guard.authorized) return guard.response;
 
     const body = await request.json();
-    const endpoint = await createApiEndpoint(session.userId, body);
+    const endpoint = await createApiEndpoint(
+      { userId: context.user.id, teamId: context.team.id },
+      body
+    );
 
     return NextResponse.json({ success: true, endpoint }, { status: 201 });
   } catch (error) {

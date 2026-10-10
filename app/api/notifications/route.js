@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { getUserNotificationLogs } from '@/services/notification-service';
+import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
+import { getTeamNotificationLogs } from '@/services/notification-service';
 
 export async function GET() {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'VIEWER');
+    if (!guard.authorized) return guard.response;
 
-    const logs = await getUserNotificationLogs(session.userId);
+    const logs = await getTeamNotificationLogs(context.team.id);
 
     return NextResponse.json({ logs }, { status: 200 });
   } catch (error) {

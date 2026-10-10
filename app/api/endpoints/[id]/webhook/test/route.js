@@ -1,13 +1,31 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
 import { testWebhookEndpoint } from '@/services/webhook-service';
+import { rateLimiter, getClientIp, createRateLimitResponse } from '@/lib/rate-limiter';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function POST(request, { params }) {
+  // 1. CSRF Verification
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
+  // 2. Rate Limiting (10 requests per minute per IP)
+  const clientIp = getClientIp(request);
+  const rateLimitResult = rateLimiter.check(`webhook:test:${clientIp}`, {
+    maxRequests: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimitResult.allowed) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'MEMBER');
+    if (!guard.authorized) return guard.response;
 
     const { id } = await params;
     let body = {};
@@ -18,7 +36,7 @@ export async function POST(request, { params }) {
       body = {};
     }
 
-    const result = await testWebhookEndpoint(session.userId, id, body);
+    const result = await testWebhookEndpoint(context.team.id, id, body);
 
     return NextResponse.json(
       {

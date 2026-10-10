@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
 import { getApiEndpointById, updateApiEndpoint, deleteApiEndpoint } from '@/services/api-service';
 
 export async function GET(request, { params }) {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'VIEWER');
+    if (!guard.authorized) return guard.response;
 
     const { id } = await params;
-    const endpoint = await getApiEndpointById(session.userId, id);
+    const endpoint = await getApiEndpointById(context.team.id, id);
 
     return NextResponse.json({ endpoint }, { status: 200 });
   } catch (error) {
@@ -23,14 +22,13 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'MEMBER');
+    if (!guard.authorized) return guard.response;
 
     const { id } = await params;
     const body = await request.json();
-    const endpoint = await updateApiEndpoint(session.userId, id, body);
+    const endpoint = await updateApiEndpoint(context.team.id, id, body);
 
     return NextResponse.json({ success: true, endpoint }, { status: 200 });
   } catch (error) {
@@ -47,13 +45,12 @@ export async function PATCH(request, context) {
 
 export async function DELETE(request, { params }) {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'ADMIN');
+    if (!guard.authorized) return guard.response;
 
     const { id } = await params;
-    await deleteApiEndpoint(session.userId, id);
+    await deleteApiEndpoint(context.team.id, id);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

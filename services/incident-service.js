@@ -27,7 +27,7 @@ export async function processCheckIncident(endpoint, checkResult) {
       return existingOpenIncident; // Keep existing open incident, no repeat incident/email/webhook
     }
 
-    // 2. Threshold Evaluation (Option A: Calculate consecutive failures from recent ApiChecks)
+    // 2. Threshold Evaluation (Calculate consecutive failures from recent ApiChecks)
     const recentChecks = await prisma.apiCheck.findMany({
       where: { endpointId },
       orderBy: { checkedAt: 'desc' },
@@ -60,54 +60,48 @@ export async function processCheckIncident(endpoint, checkResult) {
     try {
       createdIncident = await prisma.incident.create({
         data: {
-          status: 'OPEN',
-          title: `Panne sur ${endpoint.name}`,
-          cause: checkResult.errorMessage || `HTTP Status ${checkResult.httpStatusCode || 'Inaccessible'}`,
-          startedAt: new Date(),
           endpointId,
           userId,
+          status: 'OPEN',
+          startedAt: new Date(),
+          title: `Incident sur ${endpoint.name}`,
+          cause: checkResult.errorMessage || `Code HTTP ${checkResult.httpStatusCode || 'Indisponible'}`,
         },
       });
     } catch (err) {
-      // Handle PostgreSQL partial unique index violation in concurrent race conditions
-      if (err.code === 'P2002') {
-        return await prisma.incident.findFirst({
-          where: {
-            endpointId,
-            status: 'OPEN',
-          },
-        });
-      }
-      throw err;
+      // Race condition safety
+      createdIncident = await prisma.incident.findFirst({
+        where: { endpointId, status: 'OPEN' },
+      });
     }
 
+    if (!createdIncident) return null;
+
     // 4. Trigger Email, In-App & Webhook Notifications in isolated try/catch blocks
-    if (createdIncident) {
-      // Email Notification
-      try {
-        await sendIncidentNotification(createdIncident, 'INCIDENT_OPEN');
-      } catch (emailErr) {
-        console.error(`[Email Trigger Error] OPEN ${createdIncident.id}:`, emailErr);
-      }
+    // Email Notification
+    try {
+      await sendIncidentNotification(createdIncident, endpoint, 'INCIDENT_OPEN');
+    } catch (emailErr) {
+      console.error(`[Email Trigger Error] OPEN ${createdIncident.id}:`, emailErr);
+    }
 
-      // In-App Notification
-      try {
-        await createInAppNotification(createdIncident, 'INCIDENT_OPEN');
-      } catch (inAppErr) {
-        console.error(`[InApp Trigger Error] OPEN ${createdIncident.id}:`, inAppErr);
-      }
+    // In-App Notification
+    try {
+      await createInAppNotification(createdIncident, 'INCIDENT_OPEN');
+    } catch (inAppErr) {
+      console.error(`[InApp Trigger Error] OPEN ${createdIncident.id}:`, inAppErr);
+    }
 
-      // Webhook Notification
-      try {
-        await sendIncidentWebhook(endpoint, createdIncident, 'INCIDENT_OPENED');
-      } catch (webhookErr) {
-        console.error(`[Webhook Trigger Error] OPEN ${createdIncident.id}:`, webhookErr);
-      }
+    // Webhook Notification
+    try {
+      await sendIncidentWebhook(endpoint, createdIncident, 'INCIDENT_OPEN');
+    } catch (webhookErr) {
+      console.error(`[Webhook Trigger Error] OPEN ${createdIncident.id}:`, webhookErr);
     }
 
     return createdIncident;
   } else if (checkResult.status === 'UP') {
-    // 1. Check if there is an OPEN incident that needs resolution
+    // 1. Check if there is an OPEN incident for this endpoint
     const existingOpenIncident = await prisma.incident.findFirst({
       where: {
         endpointId,
@@ -116,10 +110,10 @@ export async function processCheckIncident(endpoint, checkResult) {
     });
 
     if (!existingOpenIncident) {
-      return null; // No open incident to resolve
+      return null; // All healthy, nothing to resolve
     }
 
-    // 2. Threshold Evaluation (Option A: Calculate consecutive successes from recent ApiChecks)
+    // 2. Threshold Evaluation (Calculate consecutive successes from recent ApiChecks)
     const recentChecks = await prisma.apiCheck.findMany({
       where: { endpointId },
       orderBy: { checkedAt: 'desc' },
@@ -138,15 +132,16 @@ export async function processCheckIncident(endpoint, checkResult) {
 
     if (consecutiveSuccesses < recoveryThreshold) {
       console.log(
-        `[Incident Service] Succès de récupération ${consecutiveSuccesses}/${recoveryThreshold} pour ${endpoint.name} — Seuil non atteint, l'incident reste OPEN.`
+        `[Incident Service] Succès ${consecutiveSuccesses}/${recoveryThreshold} pour ${endpoint.name} — Seuil de récupération non atteint.`
       );
-      return existingOpenIncident;
+      return null;
     }
 
     console.log(
-      `[Incident Service] Seuil de rétablissement atteint (${consecutiveSuccesses}/${recoveryThreshold}) pour ${endpoint.name} — Résolution de l'incident.`
+      `[Incident Service] Seuil de récupération atteint (${consecutiveSuccesses}/${recoveryThreshold}) pour ${endpoint.name} — Résolution de l'incident.`
     );
 
+    // Resolve incident
     const resolvedIncident = await prisma.incident.update({
       where: { id: existingOpenIncident.id },
       data: {
@@ -158,7 +153,7 @@ export async function processCheckIncident(endpoint, checkResult) {
     // 3. Trigger Email, In-App & Webhook Notifications in isolated try/catch blocks
     // Email Notification
     try {
-      await sendIncidentNotification(resolvedIncident, 'INCIDENT_RESOLVED');
+      await sendIncidentNotification(resolvedIncident, endpoint, 'INCIDENT_RESOLVED');
     } catch (emailErr) {
       console.error(`[Email Trigger Error] RESOLVED ${resolvedIncident.id}:`, emailErr);
     }
@@ -183,10 +178,15 @@ export async function processCheckIncident(endpoint, checkResult) {
   return null;
 }
 
-export async function getUserIncidents(userId, statusFilter = null) {
-  if (!userId) throw new Error('Utilisateur non identifié');
+export async function getTeamIncidents(teamId, statusFilter = null) {
+  if (!teamId) throw new Error('Équipe non identifiée');
 
-  const whereCondition = { userId };
+  const whereCondition = {
+    endpoint: {
+      teamId,
+    },
+  };
+
   if (statusFilter) {
     whereCondition.status = statusFilter.toUpperCase();
   }
@@ -200,6 +200,7 @@ export async function getUserIncidents(userId, statusFilter = null) {
           name: true,
           url: true,
           method: true,
+          teamId: true,
         },
       },
     },
@@ -207,16 +208,52 @@ export async function getUserIncidents(userId, statusFilter = null) {
   });
 }
 
-export async function getEndpointIncidents(endpointId, userId) {
-  if (!endpointId || !userId) throw new Error('Paramètres manquants');
+export async function getUserIncidents(userId, statusFilter = null) {
+  if (!userId) throw new Error('Utilisateur non identifié');
 
-  // Verify ownership
-  await getApiEndpointById(userId, endpointId);
+  const whereCondition = {
+    endpoint: {
+      team: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+  };
+
+  if (statusFilter) {
+    whereCondition.status = statusFilter.toUpperCase();
+  }
+
+  return await prisma.incident.findMany({
+    where: whereCondition,
+    include: {
+      endpoint: {
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          method: true,
+          teamId: true,
+        },
+      },
+    },
+    orderBy: { startedAt: 'desc' },
+  });
+}
+
+export async function getEndpointIncidents(endpointId, teamIdOrUserId) {
+  if (!endpointId || !teamIdOrUserId) throw new Error('Paramètres manquants');
 
   return await prisma.incident.findMany({
     where: {
       endpointId,
-      userId,
+      endpoint: {
+        OR: [
+          { teamId: teamIdOrUserId },
+          { userId: teamIdOrUserId },
+        ],
+      },
     },
     orderBy: { startedAt: 'desc' },
   });

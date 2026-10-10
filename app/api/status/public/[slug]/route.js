@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
 import { getPublicStatusPageData } from '@/services/status-page-service';
+import { rateLimiter, getClientIp, createRateLimitResponse } from '@/lib/rate-limiter';
 
 export async function GET(request, { params }) {
+  // Rate Limiting on public status page (60 requests per minute per IP)
+  const clientIp = getClientIp(request);
+  const rateLimitResult = rateLimiter.check(`status:public:${clientIp}`, {
+    maxRequests: 60,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimitResult.allowed) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   try {
     const { slug } = await params;
 

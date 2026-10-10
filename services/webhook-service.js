@@ -1,76 +1,15 @@
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma.js';
 import { getApiEndpointById } from './api-service.js';
+import { isPrivateOrReservedIp, validateSafeUrl, safeFetch } from '../lib/ssrf-guard.js';
+
+export { isPrivateOrReservedIp };
 
 /**
- * Checks if a given hostname or IP is loopback, link-local, private RFC 1918, or metadata.
- * Basic defensive SSRF protection.
+ * Validates a webhook URL for scheme and SSRF constraints using unified ssrf-guard.
  */
-export function isPrivateOrReservedIp(hostname) {
-  if (!hostname || typeof hostname !== 'string') return true;
-
-  const cleanHost = hostname.trim().toLowerCase();
-
-  // Local loopback hostnames
-  if (
-    cleanHost === 'localhost' ||
-    cleanHost === '127.0.0.1' ||
-    cleanHost === '0.0.0.0' ||
-    cleanHost === '::1' ||
-    cleanHost === '[::1]'
-  ) {
-    return true;
-  }
-
-  // IPv4 regex checks
-  // 127.0.0.0/8 (Loopback)
-  if (/^127\./.test(cleanHost)) return true;
-  // 10.0.0.0/8 (Private)
-  if (/^10\./.test(cleanHost)) return true;
-  // 172.16.0.0/12 (Private 172.16.x.x - 172.31.x.x)
-  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(cleanHost)) return true;
-  // 192.168.0.0/16 (Private)
-  if (/^192\.168\./.test(cleanHost)) return true;
-  // 169.254.0.0/16 (Link-local / Cloud Metadata: 169.254.169.254)
-  if (/^169\.254\./.test(cleanHost)) return true;
-
-  // IPv6 checks (Link-local / Unique Local / Loopback)
-  if (
-    cleanHost.startsWith('fe80:') ||
-    cleanHost.startsWith('fc00:') ||
-    cleanHost.startsWith('fd00:') ||
-    cleanHost.startsWith('[fe80:') ||
-    cleanHost.startsWith('[fc00:') ||
-    cleanHost.startsWith('[fd00:')
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Validates a webhook URL for scheme and SSRF constraints.
- */
-export function validateWebhookUrl(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== 'string') {
-    return { valid: false, error: 'URL de webhook manquante' };
-  }
-
-  try {
-    const parsed = new URL(rawUrl.trim());
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return { valid: false, error: 'Le protocole doit être http:// ou https://' };
-    }
-
-    if (isPrivateOrReservedIp(parsed.hostname)) {
-      return { valid: false, error: 'Accès aux adresses locales ou privées interdit (SSRF Guard)' };
-    }
-
-    return { valid: true, url: parsed.toString() };
-  } catch (_) {
-    return { valid: false, error: 'Format d’URL invalide' };
-  }
+export async function validateWebhookUrl(rawUrl) {
+  return await validateSafeUrl(rawUrl);
 }
 
 /**
@@ -133,7 +72,7 @@ export async function sendIncidentWebhook(endpoint, incident, event) {
       return null; // No webhook configured
     }
 
-    const validation = validateWebhookUrl(endpoint.webhookUrl);
+    const validation = await validateSafeUrl(endpoint.webhookUrl);
     if (!validation.valid) {
       console.warn(
         `[Webhook Warning] URL de webhook invalide ou rejetée pour l'endpoint ${endpoint.id}: ${validation.error}`
@@ -164,11 +103,12 @@ export async function sendIncidentWebhook(endpoint, incident, event) {
     let errorMessage = null;
 
     try {
-      const response = await fetch(targetUrl, {
+      const response = await safeFetch(targetUrl, {
         method: 'POST',
         headers,
         body: rawPayload,
         signal: controller.signal,
+        timeout: 5000,
       });
 
       clearTimeout(timeoutId);
@@ -243,7 +183,7 @@ export async function testWebhookEndpoint(userId, endpointId, options = {}) {
     throw new Error('Veuillez renseigner une URL de webhook valide.');
   }
 
-  const validation = validateWebhookUrl(targetWebhookUrl);
+  const validation = await validateSafeUrl(targetWebhookUrl);
   if (!validation.valid) {
     throw new Error(validation.error);
   }
@@ -267,11 +207,12 @@ export async function testWebhookEndpoint(userId, endpointId, options = {}) {
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(validation.url, {
+    const response = await safeFetch(validation.url, {
       method: 'POST',
       headers,
       body: rawPayload,
       signal: controller.signal,
+      timeout: 5000,
     });
 
     clearTimeout(timeoutId);

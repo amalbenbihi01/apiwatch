@@ -1,164 +1,166 @@
 # APIWatch — API Monitoring & Incident Management Platform
 
-Plateforme Full Stack de surveillance d'APIs, gestion automatique des incidents, analytics de performance, notifications In-App, système d'alerting multi-destinataires par email (Gmail SMTP), Page de Statut Publique, configuration avancée des requêtes HTTP et intégrations par Webhooks signés HMAC-SHA256.
+APIWatch est une plateforme Full Stack de surveillance continue d'APIs, gestion automatisée du cycle de vie des incidents, exploration avancée des logs, tableaux de bord personnalisables multi-équipes, page de statut publique, alertes multi-destinataires par email (Gmail SMTP) et intégrations par Webhooks signés HMAC-SHA256.
 
-## Stack technique
-
-- **Framework** : Next.js 16 (App Router, JavaScript, Turbopack)
-- **Base de données** : PostgreSQL 17 (via Prisma ORM v6)
-- **Auth** : `bcryptjs` + `jose` (JWT signé, cookie HTTP-Only)
-- **State Management** : TanStack React Query (Polling optimisé à 10s pour les notifications In-App, 30s pour la Status Page)
-- **Emailing** : Nodemailer (Transport SMTP / Gmail App Password)
-- **Sécurité Webhooks** : Signature cryptographique HMAC-SHA256 (`crypto`) + Garde SSRF
-- **Styles** : Tailwind CSS
-- **Graphiques** : Recharts
+Entièrement conteneurisée avec **Docker & Docker Compose** sur **PostgreSQL 17**.
 
 ---
 
-## Fonctionnalités implémentées
+## 🚀 Stack Technique
 
-| Étape | Fonctionnalité | Statut |
-|-------|---------------|:------:|
-| **1-2** | Initialisation du projet, PostgreSQL + Prisma | ✅ |
-| **3** | Authentification (Register / Login / Logout / Session) | ✅ |
-| **4** | Gestion des API Endpoints (CRUD) | ✅ |
-| **5** | Health Checks manuels + Historique `ApiCheck` | ✅ |
-| **6** | Monitoring automatique (Scheduler serveur + `instrumentation.js`) | ✅ |
-| **7** | Incident Management (Création / Résolution auto, anti-doublon PostgreSQL) | ✅ |
-| **8** | Uptime & Analytics (Périodes 24h/7j/30j, Uptime global, P95, Recharts) | ✅ |
-| **9** | Notifications Email (Nodemailer, `NotificationLog`, Préférences) | ✅ |
-| **10** | Notifications In-App & Alerting (Cloche 🔔, Polling 10s, Redirection API) | ✅ |
-| **11** | Page de Statut Publique (`/status/[slug]`, DTO sanitisé, UI Config Dashboard, Polling 30s) | ✅ |
-| **12-13** | Architecture & Migration Prisma (Headers JSON, QueryParams JSON, Body JSON, Timeouts, Alertes, Webhooks) | ✅ |
-| **14** | Formulaire 4 Onglets (Général, Requête/Headers, Corps JSON, Alertes & Seuils) | ✅ |
-| **15** | Advanced Monitoring (Headers customisés, Query params, Body JSON, Timeout dynamique, Détection de latence, Redaction logs) | ✅ |
-| **16** | Advanced Alerts & Notifications Gmail (Seuils `unhealthyThreshold` & `recoveryThreshold`, Multi-destinataires `alertEmails`, Templates HTML, Gmail SMTP, Anti-spam, Fail-safe) | ✅ |
-| **17** | Webhooks & Integrations (Signature HMAC-SHA256, Protection SSRF, Événements `INCIDENT_OPENED`/`INCIDENT_RESOLVED`, Événement de test `WEBHOOK_TEST`, UI de test interactive) | ✅ |
+- **Framework & Runtime** : Next.js 16 (App Router, Turbopack, React 19, Standalone output) sur Node.js 24 Alpine
+- **Base de Données & ORM** : PostgreSQL 17 via Prisma ORM v6 (Migrations automatiques, Intégrité référentielle cascade & restrict)
+- **Authentification & Sessions** : JWT signé avec `jose` (HS256), hachage sécurisé `bcryptjs`, cookies sécurisés `HTTP-Only` (`SameSite=Lax`)
+- **Multi-Tenancy & RBAC** : Isolation stricte par équipe, rôles hiérarchiques (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`), invitations sécurisées par jeton haché
+- **State Management & Data Fetching** : TanStack React Query (Polling adaptatif 10s In-App, 30s Status Page)
+- **Emailing & Alerting** : Nodemailer (Transport SMTP STARTTLS / Gmail App Password, Templates HTML responsifs dark theme)
+- **Sécurité & Hardening** :
+  - Garde Anti-SSRF (Résolution DNS temps réel, blocage IPv4/IPv6 privées, loopback et métadonnées cloud)
+  - Garde Anti-CSRF (Vérification stricte de l'origine sur requêtes mutatives)
+  - Rate Limiting in-memory (Fenêtre glissante par IP)
+  - Signatures HMAC-SHA256 des Webhooks (`X-APIWatch-Signature`)
+  - Redaction automatique des headers sensibles dans les logs et interfaces
+- **Visualisations & UI** : Tailwind CSS, Recharts, Lucide Icons, DnD-ready widgets
 
 ---
 
-## Installation et démarrage
+## 📋 Tableau des Fonctionnalités Implémentées
+
+| Étape | Module / Fonctionnalité | Statut |
+| :--- | :--- | :---: |
+| **1-2** | Initialisation du projet Next.js App Router, configuration PostgreSQL & Prisma ORM | ✅ |
+| **3** | Authentification complète (Inscription, Connexion, Déconnexion, Session JWT HTTP-Only) | ✅ |
+| **4** | Gestion CRUD des API Endpoints avec validation Zod | ✅ |
+| **5** | Health Checks manuels et historique chronologique `ApiCheck` | ✅ |
+| **6** | Monitoring automatique périodique (Scheduler serveur non-bloquant via `instrumentation.js`) | ✅ |
+| **7** | Incident Management (Création/Résolution automatique, anti-doublon PostgreSQL, calcul de durée) | ✅ |
+| **8** | Uptime & Analytics (Périodes 24h/7j/30j, Uptime global, temps de réponse moyen/P95, graphiques Recharts) | ✅ |
+| **9** | Notifications Email & Alertes (Nodemailer, `NotificationLog`, Préférences utilisateurs) | ✅ |
+| **10** | Centre de Notifications In-App (Cloche interactive 🔔, polling 10s, badge non-lus, redirection API) | ✅ |
+| **11** | Page de Statut Publique (`/status/[slug]`, DTO sanitisé, UI Config Dashboard, rafraîchissement 30s) | ✅ |
+| **12-14** | Formulaire Avancé 4 Onglets (Général, Requête HTTP/Headers, Corps JSON, Alertes & Seuils) | ✅ |
+| **15** | Advanced Monitoring (Méthodes GET/POST/PUT/PATCH/DELETE, headers/params custom, timeout dynamique) | ✅ |
+| **16** | Alerting Avancé (Seuils consécutifs `unhealthyThreshold`/`recoveryThreshold`, multi-destinataires, Gmail SMTP) | ✅ |
+| **17** | Webhooks & Intégrations (Signature HMAC-SHA256, garde SSRF, payloads standardisés, bouton de test direct) | ✅ |
+| **18** | Gestion d'Équipes & Multi-Tenancy (Équipes, rôles RBAC OWNER/ADMIN/MEMBER/VIEWER, invitations email, transferts) | ✅ |
+| **19** | Tableaux de Bord Personnalisables (7 widgets modulaires, persistance des préférences par utilisateur/équipe) | ✅ |
+| **20** | Explorateur de Logs & Observabilité (Filtres combinés, métriques P95/médiane, export CSV structuré) | ✅ |
+| **21** | Sécurité & Hardening (SSRF Guard DNS, CSRF Guard, Rate Limiter IP, complexité mots de passe) | ✅ |
+| **22** | Conteneurisation Docker & Déploiement (Build multi-stage Alpine Node 24, standalone, healthchecks Docker) | ✅ |
+| **23** | Migration Sécurisée des Données & PostgreSQL 17 (Restauration intégrale des données historiques, réconciliation Prisma) | ✅ |
+
+---
+
+## 🐳 Démarrage Rapide avec Docker Compose
+
+Le moyen le plus simple et recommandé de lancer APIWatch en production ou en test local :
+
+### 1. Cloner le projet
+
+```bash
+git clone https://github.com/amalbenbihi01/apiwatch.git
+cd apiwatch
+```
+
+### 2. Configurer l'environnement
+
+```bash
+cp .env.example .env
+```
+*(Ajustez vos variables SMTP et vos clés de sécurité dans `.env` si nécessaire).*
+
+### 3. Démarrer la stack
+
+```bash
+docker compose up -d --build
+```
+
+L'application est automatiquement initialisée (migrations Prisma exécutées au démarrage, conteneurs `Healthy`) et accessible sur :
+👉 **[http://localhost:3000](http://localhost:3000)**
+
+---
+
+## 💻 Démarrage en Développement Local (sans Docker)
 
 ### Prérequis
-- Node.js 18+
-- PostgreSQL 17
+- Node.js 20+ ou 24
+- PostgreSQL 17 installé localement
 
-### Configuration
+### Étapes
 
-1. Cloner le dépôt :
-   ```bash
-   git clone https://github.com/amalbenbihi01/apiwatch.git
-   cd apiwatch
-   ```
-
-2. Installer les dépendances :
+1. Installer les dépendances :
    ```bash
    npm install
    ```
 
-3. Configurer les variables d'environnement :
+2. Configurer `.env` :
    ```bash
    cp .env.example .env
-   # Remplir les valeurs dans .env (DATABASE_URL, JWT_SECRET, CRON_SECRET, SMTP)
    ```
+   Renseignez votre `DATABASE_URL` locale (ex: `postgresql://postgres:password@localhost:5432/apiwatch?schema=public`).
 
-4. Créer la base de données PostgreSQL :
-   ```sql
-   CREATE DATABASE apiwatch;
-   ```
-
-5. Appliquer les migrations Prisma :
+3. Appliquer les migrations et générer le client Prisma :
    ```bash
    npx prisma migrate deploy
    npx prisma generate
    ```
 
-6. Démarrer le serveur de développement :
+4. Lancer le serveur de développement :
    ```bash
    npm run dev
    ```
 
-L'application sera disponible sur [http://localhost:3000](http://localhost:3000).
+---
+
+## 🔒 Sécurité & Bonnes Pratiques
+
+- **Zéro fuite de secrets** : Les clés secrètes (`webhookSecret`), tokens et mots de passe ne sont jamais renvoyés aux clients.
+- **Authentification robuste** : Cookies de session `HTTP-Only` avec attributs `SameSite=Lax` et flags de sécurité.
+- **Garde Anti-SSRF** : Chaque URL ciblée par un check ou un webhook fait l'objet d'une résolution DNS stricte interdisant l'accès aux réseaux internes (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.169.254`, IPv6 `::1`, `fc00::/7`, `fe80::/10`).
+- **Garde Anti-CSRF** : Vérification systématique des en-têtes `Origin` et `Referer` sur les endpoints d'écriture.
+- **Rate Limiting** : Protection contre le brute-force sur l'authentification et les actions sensibles.
+- **Contrôle d'accès RBAC** : Vérification au niveau du serveur de l'appartenance à l'équipe et des permissions (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`) sur chaque ressource.
 
 ---
 
-## Architecture du Projet
+## 🧪 Tests de Qualification
 
-```
-Next.js Monolithe Full Stack
-│
-├── app/                        # Pages & Route Handlers (App Router)
-│   ├── api/                    # API Routes
-│   │   ├── analytics/          # Analytics globales Dashboard
-│   │   ├── auth/               # Register, Login, Logout, Me
-│   │   ├── cron/               # Route monitoring automatique (CRON_SECRET)
-│   │   ├── endpoints/          # CRUD Endpoints, Checks, Incidents, Analytics, Check-Url
-│   │   │   └── [id]/webhook/test # Route de test interactif pour les Webhooks (WEBHOOK_TEST)
-│   │   ├── incidents/          # Liste des incidents
-│   │   ├── notifications/      # Emails logs, préférences et notifications In-App
-│   │   ├── status-page/        # Configuration privée Status Page
-│   │   └── status/public/[slug]# Endpoint public sanitisé Status Page
-│   ├── dashboard/              # Pages Dashboard protégées
-│   │   ├── apis/[id]/          # Détail API & analytics
-│   │   ├── notifications/      # Centre de Notifications In-App
-│   │   └── status-page/        # Page de configuration Status Page Publique
-│   ├── status/[slug]/          # Page de Statut Publique dynamique (Sanitisée, Quasi t-réel 30s)
-│   ├── login/
-│   └── register/
-│
-├── components/
-│   ├── api-monitoring/         # ApiCard, ApiForm (Formulaire 4 Onglets + Webhook UI), ApiList, HealthCheckStatus,
-│   │                           # IncidentsList, AnalyticsChart, NotificationPreferences,
-│   │                           # NotificationLogsList, NotificationBell, NotificationDropdown, StatusPageConfig
-│   └── status/                 # PublicStatusHeader, PublicServicesList, PublicIncidentsList
-│
-├── hooks/                      # React Query hooks (use-apis, use-monitoring,
-│                               # use-incidents, use-analytics, use-notifications,
-│                               # use-in-app-notifications, use-status-page)
-├── lib/                        # auth.js, prisma.js, scheduler.js
-├── services/                   # Service Layer :
-│                               # auth-service, api-service, monitoring-service, incident-service,
-│                               # analytics-service, notification-service, in-app-notification-service,
-│                               # status-page-service, webhook-service
-├── prisma/
-│   ├── schema.prisma           # Modèles User, ApiEndpoint, ApiCheck, Incident, NotificationLog, InAppNotification, StatusPage
-│   └── migrations/             # Migrations PostgreSQL
-├── middleware.js                # Protection des routes /dashboard
-├── instrumentation.js           # Démarrage automatique du scheduler
-└── .env.example
+Le projet intègre des suites de tests automatisées validant l'ensemble des modules :
+
+```bash
+node scripts/test-step18.mjs   # Tests Gestion d'équipes & RBAC (41/41 tests passés)
+node scripts/test-step19.mjs   # Tests Tableaux de bord personnalisables (35/35 assertions passées)
+node scripts/test-step20.mjs   # Tests Observabilité, Logs & Export CSV (66/66 tests passés)
+node scripts/test-step21.mjs   # Tests Sécurité, SSRF, CSRF, Rate Limiting (56/56 tests passés)
+node scripts/test-step22.mjs   # Tests Dockerfile & Déploiement
 ```
 
 ---
 
-## Sécurité & Robustesse
+## 📂 Architecture des Dossiers
 
-- **Sessions HTTP-Only** : Cookie sécurisé `apiwatch_session` avec signature JWT (`jose`, HS256).
-- **Isolation des Données** : Vérification stricte de l'appartenance (`userId`) sur toutes les requêtes d'API.
-- **Protection Anti-Spam** : Unicité des incidents `OPEN` et des notifications d'alerte lors de pannes continues.
-- **Signature HMAC-SHA256 des Webhooks** : En-tête `X-APIWatch-Signature: sha256=<signature>` pour authentifier l'émetteur.
-- **Garde Anti-SSRF** : Blocage préventif des requêtes vers `localhost`, `127.0.0.1`, les métadonnées cloud (`169.254.169.254`) et les plages IP privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
-- **Masquage des Secrets** : `webhookSecret`, mots de passe, tokens et headers sensibles ne sont jamais divulgués au frontend ni dans les logs.
-- **Sanitisation Status Page Publique** : Aucune URL interne, secret ou adresse email n'est exposée sur `/status/[slug]`.
-- **Fail-Safe Total** : Une erreur SMTP ou un échec de distribution Webhook n'interrompt jamais le cycle de surveillance du monitoring.
+```text
+apiwatch/
+├── app/                        # Pages & Route Handlers (Next.js App Router)
+│   ├── api/                    # Endpoints REST (auth, endpoints, incidents, logs, teams, status, etc.)
+│   ├── dashboard/              # Interface utilisateur protégée (monitors, logs, team, settings)
+│   ├── status/[slug]/          # Page de statut publique
+│   ├── login/ & register/      # Interfaces d'authentification
+│   └── page.js                 # Page d'accueil / navigation
+├── components/                 # Composants React modulaires (dashboard, logs, team, api-monitoring)
+├── hooks/                      # Hooks React Query personnalisés
+├── lib/                        # Utilitaires (auth, prisma, scheduler, ssrf-guard, csrf-guard, rate-limiter)
+├── services/                   # Couche métier isolée (auth, api, monitoring, team, logs, webhook, etc.)
+├── prisma/                     # Schéma déclaratif et migrations versionnées PostgreSQL
+├── scripts/                    # Scripts de qualification et de tests automatisés
+├── Dockerfile                  # Build multi-stage optimisé (Node 24 Alpine)
+├── docker-compose.yml          # Orchestration Next.js + PostgreSQL 17
+├── docker-entrypoint.sh        # Point d'entrée avec auto-migration Prisma
+└── .env.example                # Modèle des variables d'environnement
+```
 
 ---
 
-## Fonctionnalités Clés
+## 📄 Licence
 
-### 🌐 Webhooks & Intégrations (Étape 17)
-- **Déclencheurs Automatiques** : Événements `INCIDENT_OPENED` et `INCIDENT_RESOLVED` envoyés en HTTP POST avec payload JSON standardisé.
-- **Sécurité HMAC** : Signature calculée sur le corps brut de la requête à l'aide de la clé secrète configurée.
-- **Bouton "Tester le webhook"** : Événement dédié `WEBHOOK_TEST` permettant de vérifier la distribution et le code HTTP en direct sans altérer l'historique d'incidents.
-- **Gestion Sécurisée** : Masquage du secret dans l'interface (`🔒 Secret configuré`) et conservation automatique lors des modifications.
-
-### 📧 Notifications Email & Alertes Multi-Destinataires (Étape 16)
-- **Seuils Personnalisables** : Déclenchement d'incident après `unhealthyThreshold` échecs consécutifs et résolution après `recoveryThreshold` succès consécutifs.
-- **Multi-Destinataires** : Envoi groupé à l'adresse du propriétaire (`user.email`) ainsi qu'à la liste `alertEmails`.
-- **Templates HTML Professionnels** : Emails responsifs dark-theme avec récapitulatif précis de la panne (URL, Méthode, Statut, Cause, Durée d'interruption).
-- **Support Gmail SMTP** : Connexion STARTTLS sur le port 587 avec App Passwords Google.
-
-### ⚡ Advanced Monitoring (Étape 15)
-- **Requêtes HTTP Complètes** : Support des méthodes `GET`, `POST`, `PUT`, `PATCH`, `DELETE`.
-- **Headers & Paramètres d'URL** : Injection dynamique des en-têtes personnalisés et des query strings.
-- **Corps JSON** : Transmission de payloads pour les méthodes d'écriture (`POST`, `PUT`, `PATCH`).
-- **Détection de Latence** : Alerte en cas de dépassement du seuil `responseTimeThresholdMs`.
+Ce projet est sous licence MIT.

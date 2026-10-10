@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
 import { getGlobalAnalytics } from '@/services/analytics-service';
 
 export async function GET() {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'VIEWER');
+    if (!guard.authorized) return guard.response;
 
-    const globalAnalytics = await getGlobalAnalytics(session.userId);
+    const globalAnalytics = await getGlobalAnalytics(context.team.id);
 
     return NextResponse.json({ globalAnalytics }, { status: 200 });
   } catch (error) {
