@@ -5,7 +5,7 @@ import { checkApiEndpoint } from '@/services/monitoring-service';
 export async function POST(request, { params }) {
   try {
     const context = await getActiveTeamContext();
-    const guard = enforceRole(context, 'MEMBER');
+    const guard = enforceRole(context, 'MEMBER', request);
     if (!guard.authorized) return guard.response;
 
     const { id } = await params;

@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
 import { resetUserDashboardPreferences } from '@/services/dashboard-service';
 
-export async function POST() {
+export async function POST(request) {
   try {
     const context = await getActiveTeamContext();
-    const guard = enforceRole(context, 'VIEWER');
+    const guard = enforceRole(context, 'VIEWER', request);
     if (!guard.authorized) return guard.response;
 
     const result = await resetUserDashboardPreferences(context.user.id, context.team.id);

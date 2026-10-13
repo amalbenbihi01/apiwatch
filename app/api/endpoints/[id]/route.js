@@ -23,7 +23,7 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const context = await getActiveTeamContext();
-    const guard = enforceRole(context, 'MEMBER');
+    const guard = enforceRole(context, 'MEMBER', request);
     if (!guard.authorized) return guard.response;
 
     const { id } = await params;
@@ -46,7 +46,7 @@ export async function PATCH(request, context) {
 export async function DELETE(request, { params }) {
   try {
     const context = await getActiveTeamContext();
-    const guard = enforceRole(context, 'ADMIN');
+    const guard = enforceRole(context, 'ADMIN', request);
     if (!guard.authorized) return guard.response;
 
     const { id } = await params;

@@ -31,7 +31,7 @@ export async function GET() {
 export async function PUT(request) {
   try {
     const context = await getActiveTeamContext();
-    const guard = enforceRole(context, 'VIEWER');
+    const guard = enforceRole(context, 'VIEWER', request);
     if (!guard.authorized) return guard.response;
 
     const body = await request.json();
