@@ -285,25 +285,27 @@ export async function getGlobalAnalytics(teamIdOrUserId) {
   const totalApis = endpoints.length;
   const activeEndpoints = endpoints.filter((e) => e.isActive);
   const activeApisCount = activeEndpoints.length;
+  const activeIds = activeEndpoints.map((e) => e.id);
 
   let upApisCount = 0;
   let downApisCount = 0;
 
-  for (const ep of activeEndpoints) {
-    const latestCheck = await prisma.apiCheck.findFirst({
-      where: { endpointId: ep.id },
+  if (activeIds.length > 0) {
+    const latestChecks = await prisma.apiCheck.findMany({
+      where: { endpointId: { in: activeIds } },
+      distinct: ['endpointId'],
       orderBy: { checkedAt: 'desc' },
+      select: { endpointId: true, status: true },
     });
 
-    if (latestCheck) {
-      if (latestCheck.status === 'UP') upApisCount++;
+    for (const check of latestChecks) {
+      if (check.status === 'UP') upApisCount++;
       else downApisCount++;
     }
   }
 
   // Calculate Weighted 24h Global Uptime & Avg Response Time
   const startDate24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const activeIds = activeEndpoints.map((e) => e.id);
 
   const checks24h = activeIds.length > 0
     ? await prisma.apiCheck.findMany({
