@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AppHeader from '@/components/AppHeader';
+import { useCurrentUser } from '@/hooks/use-auth';
 import {
   useTeams,
   useTeamDetails,
@@ -14,11 +16,60 @@ import {
   useTransferOwnership,
   useDeleteTeam,
 } from '@/hooks/use-teams';
-import TeamSwitcher from '@/components/team/TeamSwitcher';
+
+function TeamRenameCard({ team, updateTeamMutation }) {
+  const [renameName, setRenameName] = useState(team?.name || '');
+  const [renameSuccess, setRenameSuccess] = useState('');
+  const [renameError, setRenameError] = useState('');
+
+  const handleRename = async (e) => {
+    e.preventDefault();
+    setRenameError('');
+    setRenameSuccess('');
+    try {
+      await updateTeamMutation.mutateAsync({ name: renameName });
+      setRenameSuccess("Nom de l'équipe mis à jour avec succès.");
+    } catch (err) {
+      setRenameError(err.message || 'Erreur lors du renommage');
+    }
+  };
+
+  return (
+    <form onSubmit={handleRename} className="space-y-3">
+      <label className="block text-xs font-medium text-slate-300">Renommer l&apos;équipe</label>
+      {renameSuccess && (
+        <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+          {renameSuccess}
+        </div>
+      )}
+      {renameError && (
+        <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+          {renameError}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          required
+          value={renameName}
+          onChange={(e) => setRenameName(e.target.value)}
+          className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button
+          type="submit"
+          disabled={updateTeamMutation.isPending || !renameName.trim()}
+          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-lg text-xs font-medium text-white transition-colors"
+        >
+          Enregistrer
+        </button>
+      </div>
+    </form>
+  );
+}
 
 export default function TeamManagementPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState(null);
+  const { data: currentUser } = useCurrentUser();
 
   const { data: teamsData, isLoading: isLoadingTeams } = useTeams();
   const activeTeamId = teamsData?.activeTeamId;
@@ -29,10 +80,6 @@ export default function TeamManagementPage() {
   const [inviteRole, setInviteRole] = useState('MEMBER');
   const [inviteSuccess, setInviteSuccess] = useState('');
   const [inviteError, setInviteError] = useState('');
-
-  const [renameName, setRenameName] = useState('');
-  const [renameSuccess, setRenameSuccess] = useState('');
-  const [renameError, setRenameError] = useState('');
 
   const [selectedNewOwner, setSelectedNewOwner] = useState('');
   const [transferSuccess, setTransferSuccess] = useState('');
@@ -49,30 +96,6 @@ export default function TeamManagementPage() {
   const transferOwnershipMutation = useTransferOwnership(activeTeamId);
   const deleteTeamMutation = useDeleteTeam(activeTeamId);
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) {
-          router.push('/login');
-          return;
-        }
-        const data = await res.json();
-        if (data.user) {
-          setCurrentUser(data.user);
-        }
-      } catch (_) {
-        router.push('/login');
-      }
-    }
-    fetchUser();
-  }, [router]);
-
-  useEffect(() => {
-    if (team?.name) {
-      setRenameName(team.name);
-    }
-  }, [team?.name]);
 
   if (isLoadingTeams || isLoadingTeam) {
     return (
@@ -147,18 +170,6 @@ export default function TeamManagementPage() {
     }
   };
 
-  const handleRename = async (e) => {
-    e.preventDefault();
-    setRenameError('');
-    setRenameSuccess('');
-    try {
-      await updateTeamMutation.mutateAsync({ name: renameName });
-      setRenameSuccess("Nom de l'équipe mis à jour avec succès.");
-    } catch (err) {
-      setRenameError(err.message || 'Erreur lors du renommage');
-    }
-  };
-
   const handleTransfer = async (e) => {
     e.preventDefault();
     setTransferError('');
@@ -226,26 +237,8 @@ export default function TeamManagementPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span className="text-sm font-semibold">Tableau de bord</span>
-            </Link>
-            <span className="text-slate-600">/</span>
-            <div className="flex items-center gap-2">
-              <TeamSwitcher />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">Connecté en tant que <strong className="text-slate-200">{currentUser?.name}</strong></span>
-          </div>
-        </div>
-      </header>
+      {/* Header partagé unifié */}
+      <AppHeader />
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -271,7 +264,7 @@ export default function TeamManagementPage() {
               href="/dashboard"
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-sm font-medium text-slate-200 transition-all"
             >
-              Voir les monitors de l'équipe
+              Voir les monitors de l&apos;équipe
             </Link>
           </div>
         </div>
@@ -283,7 +276,7 @@ export default function TeamManagementPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-white">Membres de l'équipe</h2>
+                  <h2 className="text-lg font-bold text-white">Membres de l&apos;équipe</h2>
                   <p className="text-xs text-slate-400">Gérez les accès et les permissions des collaborateurs</p>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
@@ -397,7 +390,7 @@ export default function TeamManagementPage() {
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                 <h3 className="text-md font-bold text-white">Inviter un collaborateur</h3>
                 <p className="text-xs text-slate-400">
-                  Envoyez une invitation par email avec un lien d'accès sécurisé valide 7 jours.
+                  Envoyez une invitation par email avec un lien d&apos;accès sécurisé valide 7 jours.
                 </p>
 
                 {inviteSuccess && (
@@ -451,44 +444,16 @@ export default function TeamManagementPage() {
             {/* Team Settings (Owner only) */}
             {isOwner && (
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-                <h3 className="text-md font-bold text-white border-b border-slate-800 pb-3">Paramètres de l'équipe</h3>
+                <h3 className="text-md font-bold text-white border-b border-slate-800 pb-3">Paramètres de l&apos;équipe</h3>
 
                 {/* Rename */}
-                <form onSubmit={handleRename} className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-300">Renommer l'équipe</label>
-                  {renameSuccess && (
-                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
-                      {renameSuccess}
-                    </div>
-                  )}
-                  {renameError && (
-                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-                      {renameError}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      required
-                      value={renameName}
-                      onChange={(e) => setRenameName(e.target.value)}
-                      className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <button
-                      type="submit"
-                      disabled={updateTeamMutation.isPending || !renameName.trim()}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-lg text-xs font-medium text-white transition-colors"
-                    >
-                      Enregistrer
-                    </button>
-                  </div>
-                </form>
+                <TeamRenameCard key={`${team.id}_${team.name}`} team={team} updateTeamMutation={updateTeamMutation} />
 
                 {/* Ownership Transfer */}
                 <form onSubmit={handleTransfer} className="space-y-3 border-t border-slate-800 pt-4">
                   <label className="block text-xs font-medium text-slate-300">Transférer la propriété</label>
                   <p className="text-[11px] text-slate-400">
-                    Désignez un autre membre comme propriétaire. Vous conserverez le rôle d'Administrateur.
+                    Désignez un autre membre comme propriétaire. Vous conserverez le rôle d&apos;Administrateur.
                   </p>
                   {transferSuccess && (
                     <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
@@ -527,7 +492,7 @@ export default function TeamManagementPage() {
                 <div className="border-t border-rose-950/40 pt-4 space-y-2">
                   <p className="text-xs font-bold text-rose-400">Zone de danger</p>
                   <p className="text-[11px] text-slate-400">
-                    Une équipe ne peut être supprimée que si elle ne contient plus aucun monitor d'API.
+                    Une équipe ne peut être supprimée que si elle ne contient plus aucun monitor d&apos;API.
                   </p>
                   {deleteError && (
                     <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
@@ -540,7 +505,7 @@ export default function TeamManagementPage() {
                     disabled={deleteTeamMutation.isPending}
                     className="w-full py-2 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-medium text-xs transition-colors disabled:opacity-50"
                   >
-                    Supprimer l'équipe
+                    Supprimer l&apos;équipe
                   </button>
                 </div>
               </div>

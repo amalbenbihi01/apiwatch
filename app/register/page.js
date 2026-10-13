@@ -4,31 +4,18 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-function RegisterForm() {
+function RegisterFormContent({ initialEmail, initialInvitationToken }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const invitationToken = searchParams.get('invitationToken') || '';
-  const emailParam = searchParams.get('email') || '';
 
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    email: initialEmail,
     password: '',
     confirmPassword: '',
-    invitationToken: '',
+    invitationToken: initialInvitationToken,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (emailParam || invitationToken) {
-      setFormData((prev) => ({
-        ...prev,
-        email: emailParam || prev.email,
-        invitationToken: invitationToken || prev.invitationToken,
-      }));
-    }
-  }, [emailParam, invitationToken]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -74,16 +61,16 @@ function RegisterForm() {
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold tracking-tight text-white">Créer un compte</h1>
           <p className="text-sm text-slate-400">
-            {invitationToken ? "Créez votre compte pour rejoindre l'équipe" : 'Rejoignez la plateforme APIWatch'}
+            {initialInvitationToken ? "Créez votre compte pour rejoindre l'équipe" : 'Rejoignez la plateforme APIWatch'}
           </p>
         </div>
 
-        {invitationToken && (
+        {initialInvitationToken && (
           <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-indigo-300 text-xs flex items-center gap-2">
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Vous finalisez une invitation d'équipe. Votre compte y sera automatiquement rattaché.</span>
+            <span>Vous finalisez une invitation d&apos;équipe. Votre compte y sera automatiquement rattaché.</span>
           </div>
         )}
 
@@ -171,6 +158,20 @@ function RegisterForm() {
         </div>
       </div>
     </div>
+  );
+}
+
+function RegisterForm() {
+  const searchParams = useSearchParams();
+  const invitationToken = searchParams.get('invitationToken') || '';
+  const emailParam = searchParams.get('email') || '';
+
+  return (
+    <RegisterFormContent
+      key={`${emailParam}_${invitationToken}`}
+      initialEmail={emailParam}
+      initialInvitationToken={invitationToken}
+    />
   );
 }
 

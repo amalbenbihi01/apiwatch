@@ -8,7 +8,7 @@ export default function ActivityWidget({ size = 'small' }) {
   if (isLoading) {
     return (
       <div className="bg-slate-850 border border-slate-750 p-6 rounded-2xl shadow-xl animate-pulse flex items-center justify-center min-h-[220px]">
-        <div className="text-xs text-slate-400">Chargement du flux d'activité...</div>
+        <div className="text-xs text-slate-400">Chargement du flux d&apos;activité...</div>
       </div>
     );
   }
@@ -16,7 +16,7 @@ export default function ActivityWidget({ size = 'small' }) {
   if (error) {
     return (
       <div className="bg-slate-850 border border-slate-750 p-6 rounded-2xl shadow-xl min-h-[220px] flex items-center justify-center">
-        <p className="text-xs text-rose-400">Impossible de charger l'activité récente</p>
+        <p className="text-xs text-rose-400">Impossible de charger l&apos;activité récente</p>
       </div>
     );
   }

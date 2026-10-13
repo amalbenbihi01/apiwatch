@@ -17,7 +17,7 @@ export default function LogDetailModal({ checkId, onClose }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-850">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <span>🔍</span> Détail du Contrôle d'API
+              <span>🔍</span> Détail du Contrôle d&apos;API
             </h3>
             <p className="text-xs text-slate-400 font-mono mt-0.5">ID: {checkId}</p>
           </div>
@@ -73,7 +73,7 @@ export default function LogDetailModal({ checkId, onClose }) {
               {/* Endpoint Information */}
               <div className="bg-slate-850 border border-slate-750 p-4 rounded-xl space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Informations de l'Endpoint
+                  Informations de l&apos;Endpoint
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -109,7 +109,7 @@ export default function LogDetailModal({ checkId, onClose }) {
               {check.errorMessage && (
                 <div className="bg-rose-950/20 border border-rose-500/30 p-4 rounded-xl space-y-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
-                    <span>⚠️</span> Message d'erreur enregistré
+                    <span>⚠️</span> Message d&apos;erreur enregistré
                   </h4>
                   <pre className="font-mono text-rose-300 text-xs bg-slate-950/60 p-3 rounded-lg border border-rose-500/20 overflow-x-auto whitespace-pre-wrap">
                     {check.errorMessage}

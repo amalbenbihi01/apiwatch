@@ -1,58 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState } from 'react';
+import AppHeader from '@/components/AppHeader';
 import ApiForm from '@/components/api-monitoring/ApiForm';
 import NotificationPreferences from '@/components/api-monitoring/NotificationPreferences';
 import NotificationLogsList from '@/components/api-monitoring/NotificationLogsList';
-import NotificationBell from '@/components/api-monitoring/NotificationBell';
-import TeamSwitcher from '@/components/team/TeamSwitcher';
 import DashboardGrid from '@/components/dashboard/DashboardGrid';
 import DashboardCustomizerModal from '@/components/dashboard/DashboardCustomizerModal';
 import { useCreateApi } from '@/hooks/use-apis';
 import { useDashboardPreferences } from '@/hooks/use-dashboard-preferences';
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
 
   const { data: prefData, isLoading: isLoadingPrefs } = useDashboardPreferences();
   const createApiMutation = useCreateApi();
-
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) {
-          router.push('/login');
-          return;
-        }
-        const data = await res.json();
-        if (data.user) {
-          setUser(data.user);
-        } else {
-          router.push('/login');
-        }
-      } catch (err) {
-        router.push('/login');
-      }
-    }
-
-    fetchUser();
-  }, [router]);
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-      router.refresh();
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
 
   const handleCreateApi = (formData) => {
     createApiMutation.mutate(formData, {
@@ -66,35 +29,8 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-      {/* Header Bar */}
-      <header className="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center space-x-3">
-          <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="font-bold text-lg text-white">APIWatch</span>
-          <div className="hidden sm:block ml-2">
-            <TeamSwitcher />
-          </div>
-          <span className="hidden lg:inline-flex items-center space-x-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full ml-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>Monitoring (5 min)</span>
-          </span>
-        </div>
-
-        {user && (
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <NotificationBell />
-            <span className="text-sm text-slate-300 hidden md:inline">
-              {user.name} <span className="text-slate-500">({user.email})</span>
-            </span>
-            <button
-              onClick={handleLogout}
-              className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-slate-600"
-            >
-              Déconnexion
-            </button>
-          </div>
-        )}
-      </header>
+      {/* Header unifié partagé */}
+      <AppHeader />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-6 space-y-8">
@@ -118,37 +54,16 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setShowCustomizer(true)}
-              className="bg-slate-700 hover:bg-slate-650 border border-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+              className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <span>⚙️</span>
+              <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
               <span>Personnaliser</span>
             </button>
 
-            <Link
-              href="/dashboard/team"
-              className="bg-slate-700 hover:bg-slate-650 border border-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-            >
-              <span>👥</span>
-              <span>Équipe</span>
-            </Link>
-
-            <Link
-              href="/dashboard/logs"
-              className="bg-slate-700 hover:bg-slate-650 border border-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-            >
-              <span>📜</span>
-              <span>Logs & Analytics</span>
-            </Link>
-
-            <Link
-              href="/dashboard/status-page"
-              className="bg-slate-700 hover:bg-slate-650 border border-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-            >
-              <span>🌐</span>
-              <span>Page de statut</span>
-            </Link>
-
             <button
+              type="button"
               onClick={() => setShowAddForm(!showAddForm)}
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-xl text-xs transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/20"
             >
@@ -183,7 +98,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-lg font-bold text-white">Alertes & Notifications</h2>
             <p className="text-xs text-slate-400 mt-1">
-              Configuration des alertes d'incident et historique des notifications envoyées.
+              Configuration des alertes d&apos;incident et historique des notifications envoyées.
             </p>
           </div>
 
@@ -207,4 +122,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

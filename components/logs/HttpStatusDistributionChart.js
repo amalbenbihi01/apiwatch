@@ -19,7 +19,7 @@ export default function HttpStatusDistributionChart({ distribution, isLoading })
       <div className="bg-slate-850 border border-slate-750 p-6 rounded-2xl shadow-xl h-64 flex flex-col items-center justify-center text-center space-y-2">
         <span className="text-2xl">📊</span>
         <h4 className="text-sm font-medium text-slate-300">Aucune donnée HTTP disponible</h4>
-        <p className="text-xs text-slate-500">Les statistiques s'afficheront après les premiers contrôles.</p>
+        <p className="text-xs text-slate-500">Les statistiques s&apos;afficheront après les premiers contrôles.</p>
       </div>
     );
   }

@@ -59,7 +59,7 @@ export default function UptimeWidget({ size = 'small' }) {
           </p>
 
           <p className="text-[11px] text-slate-500">
-            Basé sur l'ensemble des contrôles exécutés sur les dernières 24 heures.
+            Basé sur l&apos;ensemble des contrôles exécutés sur les dernières 24 heures.
           </p>
         </div>
       </div>

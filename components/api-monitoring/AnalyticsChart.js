@@ -9,6 +9,33 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+function CustomTooltip({ active, payload }) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-xl text-xs space-y-1 font-mono">
+        <div className="font-bold text-slate-200">{data.label}</div>
+        {data.hasData ? (
+          <>
+            <div className="text-indigo-400">
+              Temps moyen : <span className="font-bold">{data.avgResponseTimeMs !== null ? `${data.avgResponseTimeMs} ms` : '—'}</span>
+            </div>
+            <div className="text-emerald-400">
+              Disponibilité : <span className="font-bold">{data.uptimePercentage !== null ? `${data.uptimePercentage}%` : '—'}</span>
+            </div>
+            <div className="text-slate-400 text-[10px]">
+              Checks: {data.totalChecks} ({data.upChecks} UP / {data.downChecks} DOWN)
+            </div>
+          </>
+        ) : (
+          <div className="text-slate-500 italic">Aucune donnée sur ce créneau</div>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function AnalyticsChart({ series, isLoading }) {
   if (isLoading) {
     return (
@@ -31,33 +58,6 @@ export default function AnalyticsChart({ series, isLoading }) {
       </div>
     );
   }
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-xl text-xs space-y-1 font-mono">
-          <div className="font-bold text-slate-200">{data.label}</div>
-          {data.hasData ? (
-            <>
-              <div className="text-indigo-400">
-                Temps moyen : <span className="font-bold">{data.avgResponseTimeMs !== null ? `${data.avgResponseTimeMs} ms` : '—'}</span>
-              </div>
-              <div className="text-emerald-400">
-                Disponibilité : <span className="font-bold">{data.uptimePercentage !== null ? `${data.uptimePercentage}%` : '—'}</span>
-              </div>
-              <div className="text-slate-400 text-[10px]">
-                Checks: {data.totalChecks} ({data.upChecks} UP / {data.downChecks} DOWN)
-              </div>
-            </>
-          ) : (
-            <div className="text-slate-500 italic">Aucune donnée sur ce créneau</div>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl space-y-4">

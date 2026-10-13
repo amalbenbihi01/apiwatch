@@ -26,11 +26,11 @@ export default function PublicIncidentsList({ incidents = [] }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {incidents.map((incident) => {
+          {incidents.map((incident, index) => {
             const isOpen = incident.status === 'OPEN';
             return (
               <div
-                key={incident.id}
+                key={incident.id || `${incident.startedAt || 'inc'}-${incident.serviceName || incident.title || 'srv'}-${index}`}
                 className={`p-5 rounded-xl border transition-all ${
                   isOpen
                     ? 'bg-rose-500/5 border-rose-500/30'

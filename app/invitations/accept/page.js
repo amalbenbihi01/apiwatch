@@ -88,15 +88,15 @@ function AcceptInvitationContent() {
               href="/dashboard"
               className="inline-block px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-sm font-medium transition-colors"
             >
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Link>
           </div>
         ) : (
           <div className="space-y-6">
             <div>
-              <h1 className="text-xl font-bold text-white mb-2">Rejoindre l'équipe</h1>
+              <h1 className="text-xl font-bold text-white mb-2">Rejoindre l&apos;équipe</h1>
               <p className="text-sm text-slate-300">
-                <strong className="text-white">{invitation?.invitedBy?.name || 'Un administrateur'}</strong> vous invite à rejoindre l'équipe{' '}
+                <strong className="text-white">{invitation?.invitedBy?.name || 'Un administrateur'}</strong> vous invite à rejoindre l&apos;équipe{' '}
                 <strong className="text-indigo-400">{invitation?.team?.name}</strong> avec le rôle{' '}
                 <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-semibold text-xs text-slate-200">
                   {invitation?.role}

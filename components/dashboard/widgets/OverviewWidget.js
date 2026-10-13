@@ -35,7 +35,7 @@ export default function OverviewWidget({ size = 'large' }) {
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
           <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span>📊</span> Vue Globale de l'Équipe
+            <span>📊</span> Vue Globale de l&apos;Équipe
           </h3>
           <p className="text-xs text-slate-400">Indicateurs clés de performance et disponibilité sur 24h</p>
         </div>

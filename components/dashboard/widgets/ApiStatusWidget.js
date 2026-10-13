@@ -17,7 +17,7 @@ export default function ApiStatusWidget({ size = 'medium' }) {
   if (error) {
     return (
       <div className="bg-slate-850 border border-slate-750 p-6 rounded-2xl shadow-xl min-h-[220px] flex items-center justify-center">
-        <p className="text-xs text-rose-400">Impossible de charger les statuts d'API</p>
+        <p className="text-xs text-rose-400">Impossible de charger les statuts d&apos;API</p>
       </div>
     );
   }
@@ -32,7 +32,7 @@ export default function ApiStatusWidget({ size = 'medium' }) {
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <span>⚡</span> Statut des APIs
             </h3>
-            <p className="text-xs text-slate-400">État instantané des monitors de l'équipe</p>
+            <p className="text-xs text-slate-400">État instantané des monitors de l&apos;équipe</p>
           </div>
           <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
             {endpointList.length} configuré{endpointList.length > 1 ? 's' : ''}
@@ -41,7 +41,7 @@ export default function ApiStatusWidget({ size = 'medium' }) {
 
         {endpointList.length === 0 ? (
           <div className="py-8 text-center space-y-2">
-            <p className="text-xs text-slate-400">Aucun monitor d'API configuré dans cette équipe.</p>
+            <p className="text-xs text-slate-400">Aucun monitor d&apos;API configuré dans cette équipe.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-800/80 max-h-72 overflow-y-auto mt-2">

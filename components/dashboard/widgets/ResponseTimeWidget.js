@@ -29,7 +29,7 @@ export default function ResponseTimeWidget({ size = 'large' }) {
           <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <span>📈</span> Temps de Réponse Global
           </h3>
-          <p className="text-xs text-slate-400">Évolution de la latence moyenne de l'équipe par créneau (24h)</p>
+          <p className="text-xs text-slate-400">Évolution de la latence moyenne de l&apos;équipe par créneau (24h)</p>
         </div>
         <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
           En direct

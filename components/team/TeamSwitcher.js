@@ -76,9 +76,9 @@ export default function TeamSwitcher() {
 
   if (isLoading || !activeTeam) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-400 text-sm animate-pulse">
-        <div className="w-4 h-4 rounded bg-slate-700"></div>
-        <span>Chargement équipe...</span>
+      <div className="flex items-center gap-2 h-9 px-2.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-400 text-xs animate-pulse">
+        <div className="w-5 h-5 rounded bg-slate-700"></div>
+        <span className="hidden sm:inline">Chargement...</span>
       </div>
     );
   }
@@ -88,15 +88,15 @@ export default function TeamSwitcher() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 border border-slate-700/60 hover:border-slate-600 transition-all text-sm font-medium text-slate-200"
+        className="flex items-center gap-2 h-9 px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 border border-slate-700/60 hover:border-slate-600 transition-all text-xs sm:text-sm font-medium text-slate-200"
+        title={`Équipe active : ${activeTeam.name}`}
       >
-        <div className="w-5 h-5 rounded bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center text-xs font-bold">
+        <div className="w-5 h-5 rounded bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center text-xs font-bold shrink-0">
           {activeTeam.name.charAt(0).toUpperCase()}
         </div>
-        <span className="max-w-[130px] truncate">{activeTeam.name}</span>
-        {getRoleBadge(activeTeam.role)}
+        <span className="max-w-[100px] sm:max-w-[120px] truncate">{activeTeam.name}</span>
         <svg
-          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -106,7 +106,7 @@ export default function TeamSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-72 rounded-xl bg-slate-900 border border-slate-700/80 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 mt-2 w-72 rounded-xl bg-slate-900 border border-slate-700/80 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3.5 py-2.5 border-b border-slate-800 bg-slate-950/40">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mes Équipes</p>
           </div>
@@ -162,7 +162,7 @@ export default function TeamSwitcher() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              Gérer l'équipe ({activeTeam.name})
+              Gérer l&apos;équipe ({activeTeam.name})
             </Link>
 
             <button
@@ -188,11 +188,11 @@ export default function TeamSwitcher() {
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-2">Créer une nouvelle équipe</h3>
             <p className="text-sm text-slate-400 mb-4">
-              Donnez un nom à votre équipe pour collaborer avec d'autres développeurs sur vos monitors d'API.
+              Donnez un nom à votre équipe pour collaborer avec d&apos;autres développeurs sur vos monitors d&apos;API.
             </p>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Nom de l'équipe</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Nom de l&apos;équipe</label>
                 <input
                   type="text"
                   required

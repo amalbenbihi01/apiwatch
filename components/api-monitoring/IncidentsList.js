@@ -1,8 +1,46 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+function formatDuration(startedAt, resolvedAt, nowTimestamp) {
+  const start = new Date(startedAt).getTime();
+  const end = resolvedAt ? new Date(resolvedAt).getTime() : (nowTimestamp || start);
+  const diffMs = Math.max(0, end - start);
+
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes} min`;
+  }
+  return '< 1 min';
+}
+
 export default function IncidentsList({ incidents, isLoading, error, showEndpoint = true }) {
+  const [now, setNow] = useState(null);
+
+  useEffect(() => {
+    const hasOpen = incidents && incidents.some((inc) => inc.status === 'OPEN');
+    if (!hasOpen) return;
+
+    const timer = setTimeout(() => {
+      setNow(Date.now());
+    }, 0);
+
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 30000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [incidents]);
+
   if (isLoading) {
     return (
       <div className="p-6 bg-slate-800/50 border border-slate-700/50 rounded-xl animate-pulse text-center text-xs text-slate-400">
@@ -30,23 +68,6 @@ export default function IncidentsList({ incidents, isLoading, error, showEndpoin
       </div>
     );
   }
-
-  const formatDuration = (startedAt, resolvedAt) => {
-    const start = new Date(startedAt).getTime();
-    const end = resolvedAt ? new Date(resolvedAt).getTime() : Date.now();
-    const diffMs = Math.max(0, end - start);
-    
-    const minutes = Math.floor(diffMs / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`;
-    }
-    if (minutes > 0) {
-      return `${minutes} min`;
-    }
-    return '< 1 min';
-  };
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl space-y-4">
@@ -116,7 +137,7 @@ export default function IncidentsList({ incidents, isLoading, error, showEndpoin
                           : 'bg-slate-700 text-slate-300 border-slate-600'
                       }`}
                     >
-                      {isOpen ? `En cours (${formatDuration(inc.startedAt, null)})` : formatDuration(inc.startedAt, inc.resolvedAt)}
+                      {isOpen ? `En cours (${formatDuration(inc.startedAt, null, now)})` : formatDuration(inc.startedAt, inc.resolvedAt)}
                     </span>
                   </td>
                 </tr>

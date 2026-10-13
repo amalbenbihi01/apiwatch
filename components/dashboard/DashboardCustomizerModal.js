@@ -44,29 +44,18 @@ const WIDGET_METADATA = {
   },
 };
 
-export default function DashboardCustomizerModal({
-  isOpen,
+function DashboardCustomizerDialog({
   onClose,
   initialWidgets = [],
 }) {
-  const [widgets, setWidgets] = useState([]);
+  const [widgets, setWidgets] = useState(() =>
+    [...initialWidgets].sort((a, b) => a.order - b.order)
+  );
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const updateMutation = useUpdateDashboardPreferences();
   const resetMutation = useResetDashboardPreferences();
-
-  useEffect(() => {
-    if (isOpen && initialWidgets) {
-      // Clone and ensure sorted by order
-      const sorted = [...initialWidgets].sort((a, b) => a.order - b.order);
-      setWidgets(sorted);
-      setSaveSuccess(false);
-      setErrorMessage('');
-    }
-  }, [isOpen, initialWidgets]);
-
-  if (!isOpen) return null;
 
   const handleToggleVisibility = (id) => {
     setWidgets((prev) =>
@@ -143,7 +132,7 @@ export default function DashboardCustomizerModal({
               <span>⚙️</span> Personnaliser le Dashboard
             </h2>
             <p className="text-xs text-slate-400">
-              Modifiez l'ordre, la taille et la visibilité des widgets pour cette équipe.
+              Modifiez l&apos;ordre, la taille et la visibilité des widgets pour cette équipe.
             </p>
           </div>
           <button
@@ -289,3 +278,19 @@ export default function DashboardCustomizerModal({
     </div>
   );
 }
+
+export default function DashboardCustomizerModal({
+  isOpen,
+  onClose,
+  initialWidgets = [],
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <DashboardCustomizerDialog
+      onClose={onClose}
+      initialWidgets={initialWidgets}
+    />
+  );
+}
+

@@ -1,52 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStatusPageConfig, useUpdateStatusPageConfig } from '@/hooks/use-status-page';
 
-export default function StatusPageConfig() {
-  const { data: config, isLoading, isError, error } = useStatusPageConfig();
-  const updateMutation = useUpdateStatusPageConfig();
-
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [slug, setSlug] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [publishedEndpointIds, setPublishedEndpointIds] = useState([]);
+function StatusPageForm({ initialConfig, endpoints, updateMutation }) {
+  const [isEnabled, setIsEnabled] = useState(initialConfig?.isEnabled ?? false);
+  const [slug, setSlug] = useState(initialConfig?.slug || '');
+  const [title, setTitle] = useState(initialConfig?.title || 'Statut des Services');
+  const [description, setDescription] = useState(initialConfig?.description || '');
+  const [publishedEndpointIds, setPublishedEndpointIds] = useState(initialConfig?.publishedEndpointIds || []);
 
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [copied, setCopied] = useState(false);
-
-  // Sync state when config is fetched
-  useEffect(() => {
-    if (config?.statusPage) {
-      setIsEnabled(config.statusPage.isEnabled || false);
-      setSlug(config.statusPage.slug || '');
-      setTitle(config.statusPage.title || 'Statut des Services');
-      setDescription(config.statusPage.description || '');
-      setPublishedEndpointIds(config.statusPage.publishedEndpointIds || []);
-    }
-  }, [config]);
-
-  if (isLoading) {
-    return (
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-8 flex items-center justify-center space-x-3 text-slate-400">
-        <div className="h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        <span>Chargement de la configuration de la Page de Statut...</span>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-6 rounded-xl space-y-2">
-        <h3 className="font-semibold text-lg">Erreur de chargement</h3>
-        <p className="text-sm">{error?.message || 'Impossible de charger la configuration.'}</p>
-      </div>
-    );
-  }
-
-  const endpoints = config?.endpoints || [];
 
   const handleSlugChange = (e) => {
     const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
@@ -332,5 +298,37 @@ export default function StatusPageConfig() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function StatusPageConfig() {
+  const { data: config, isLoading, isError, error } = useStatusPageConfig();
+  const updateMutation = useUpdateStatusPageConfig();
+
+  if (isLoading) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-8 flex items-center justify-center space-x-3 text-slate-400">
+        <div className="h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <span>Chargement de la configuration de la Page de Statut...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-6 rounded-xl space-y-2">
+        <h3 className="font-semibold text-lg">Erreur de chargement</h3>
+        <p className="text-sm">{error?.message || 'Impossible de charger la configuration.'}</p>
+      </div>
+    );
+  }
+
+  return (
+    <StatusPageForm
+      key={config?.statusPage?.id || 'new'}
+      initialConfig={config?.statusPage}
+      endpoints={config?.endpoints || []}
+      updateMutation={updateMutation}
+    />
   );
 }
