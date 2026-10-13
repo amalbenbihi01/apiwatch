@@ -163,13 +163,13 @@ function resolveTimeout(timeoutMs) {
  * Returns the created ApiCheck record enriched with `isSlowResponse`.
  * `isSlowResponse` is calculated at runtime and NOT persisted to the database.
  */
-export async function checkApiEndpoint(endpointId, userId) {
-  if (!endpointId || !userId) {
+export async function checkApiEndpoint(endpointId, teamId) {
+  if (!endpointId || !teamId) {
     throw new Error('Paramètres manquants');
   }
 
   // 1. Verify endpoint ownership — returns full ApiEndpoint object (all fields)
-  const endpoint = await getApiEndpointById(userId, endpointId);
+  const endpoint = await getApiEndpointById(teamId, endpointId);
 
   // 2. Resolve request configuration from endpoint
   const httpMethod = (endpoint.method || 'GET').toUpperCase();
@@ -282,13 +282,13 @@ export async function checkApiEndpoint(endpointId, userId) {
   return { ...createdCheck, isSlowResponse };
 }
 
-export async function getApiChecks(endpointId, userId, limit = 20) {
-  if (!endpointId || !userId) {
+export async function getApiChecks(endpointId, teamId, limit = 20) {
+  if (!endpointId || !teamId) {
     throw new Error('Paramètres manquants');
   }
 
   // Verify ownership
-  await getApiEndpointById(userId, endpointId);
+  await getApiEndpointById(teamId, endpointId);
 
   return await prisma.apiCheck.findMany({
     where: { endpointId },
@@ -297,13 +297,13 @@ export async function getApiChecks(endpointId, userId, limit = 20) {
   });
 }
 
-export async function getLatestApiCheck(endpointId, userId) {
-  if (!endpointId || !userId) {
+export async function getLatestApiCheck(endpointId, teamId) {
+  if (!endpointId || !teamId) {
     throw new Error('Paramètres manquants');
   }
 
   // Verify ownership
-  await getApiEndpointById(userId, endpointId);
+  await getApiEndpointById(teamId, endpointId);
 
   return await prisma.apiCheck.findFirst({
     where: { endpointId },
@@ -314,7 +314,7 @@ export async function getLatestApiCheck(endpointId, userId) {
 export async function runAutomaticMonitoring() {
   const activeEndpoints = await prisma.apiEndpoint.findMany({
     where: { isActive: true },
-    select: { id: true, userId: true, name: true, url: true },
+    select: { id: true, teamId: true, name: true, url: true },
   });
 
   if (activeEndpoints.length === 0) {
@@ -327,7 +327,7 @@ export async function runAutomaticMonitoring() {
   );
 
   const results = await Promise.allSettled(
-    activeEndpoints.map((ep) => checkApiEndpoint(ep.id, ep.userId))
+    activeEndpoints.map((ep) => checkApiEndpoint(ep.id, ep.teamId))
   );
 
   let successCount = 0;

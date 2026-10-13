@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
 import { getApiChecks } from '@/services/monitoring-service';
 
 export async function GET(request, { params }) {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    const context = await getActiveTeamContext();
+    const guard = enforceRole(context, 'VIEWER');
+    if (!guard.authorized) return guard.response;
 
     const { id } = await params;
-    const checks = await getApiChecks(id, session.userId);
+    const checks = await getApiChecks(id, context.team.id);
 
     return NextResponse.json({ checks }, { status: 200 });
   } catch (error) {
