@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
+import { getActiveTeamContext } from '@/lib/team-context';
 import { getTeamDetails, updateTeam, deleteTeam } from '@/services/team-service';
 import { prisma } from '@/lib/prisma';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function GET(request, { params }) {
   try {
@@ -40,6 +41,11 @@ export async function GET(request, { params }) {
 }
 
 export async function PUT(request, { params }) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const { teamId } = await params;
     const context = await getActiveTeamContext();
@@ -76,6 +82,11 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const { teamId } = await params;
     const context = await getActiveTeamContext();

@@ -3,6 +3,7 @@ import { getActiveTeamContext } from '@/lib/team-context';
 import { getUserTeams, createTeam } from '@/services/team-service';
 import { cookies } from 'next/headers';
 import { ACTIVE_TEAM_COOKIE_NAME } from '@/lib/team-context';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function GET() {
   try {
@@ -27,6 +28,11 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const context = await getActiveTeamContext();
     if (context.status === 401) {

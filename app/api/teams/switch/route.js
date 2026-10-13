@@ -3,8 +3,14 @@ import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { ACTIVE_TEAM_COOKIE_NAME } from '@/lib/team-context';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function POST(request) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const session = await getSession();
     if (!session || !session.userId) {

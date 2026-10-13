@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getActiveTeamContext } from '@/lib/team-context';
 import { transferOwnership } from '@/services/team-service';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function POST(request, { params }) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const { teamId } = await params;
     const context = await getActiveTeamContext();

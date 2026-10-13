@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getActiveTeamContext, enforceRole } from '@/lib/team-context';
+import { getActiveTeamContext } from '@/lib/team-context';
 import { inviteMember } from '@/services/team-service';
 import { prisma } from '@/lib/prisma';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function GET(request, { params }) {
   try {
@@ -60,6 +61,11 @@ export async function GET(request, { params }) {
 }
 
 export async function POST(request, { params }) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const { teamId } = await params;
     const context = await getActiveTeamContext();

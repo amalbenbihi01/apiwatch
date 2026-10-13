@@ -2,8 +2,14 @@ import { NextResponse } from 'next/server';
 import { getActiveTeamContext } from '@/lib/team-context';
 import { revokeInvitation } from '@/services/team-service';
 import { prisma } from '@/lib/prisma';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function DELETE(request, { params }) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const { teamId, invitationId } = await params;
     const context = await getActiveTeamContext();

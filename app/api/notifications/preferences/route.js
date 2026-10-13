@@ -4,6 +4,7 @@ import {
   getUserNotificationPreferences,
   updateUserNotificationPreferences,
 } from '@/services/notification-service';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
 export async function GET() {
   try {
@@ -24,6 +25,11 @@ export async function GET() {
 }
 
 export async function PATCH(request) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const session = await getSession();
     if (!session || !session.userId) {
