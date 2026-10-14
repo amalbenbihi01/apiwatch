@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { markAllNotificationsAsRead } from '@/services/in-app-notification-service';
+import { verifyCsrfOrigin, createCsrfErrorResponse } from '@/lib/csrf-guard';
 
-export async function PATCH() {
+export async function PATCH(request) {
+  const csrfCheck = verifyCsrfOrigin(request);
+  if (!csrfCheck.valid) {
+    return createCsrfErrorResponse(csrfCheck.error);
+  }
+
   try {
     const session = await getSession();
     if (!session || !session.userId) {
